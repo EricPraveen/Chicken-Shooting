@@ -1,0 +1,12 @@
+# Build files and executables
+ChickenGame
+ChickenShooter
+build/
+bin/
+obj/
+*.o
+*.out
+
+# IDE and System files
+.DS_Store
+.vscode/
