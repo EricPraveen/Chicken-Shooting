@@ -1,12 +1,9 @@
-# Build files and executables
+# Executables
 ChickenGame
-ChickenShooter
-build/
-bin/
-obj/
 *.o
-*.out
 
-# IDE and System files
+# macOS
 .DS_Store
+
+# IDE
 .vscode/
