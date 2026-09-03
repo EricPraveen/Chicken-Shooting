@@ -98,8 +98,13 @@ public:
     void drawWinScreen();
     void drawStarfield();
 
+#ifdef __EMSCRIPTEN__
+    void drawText(float x, float y, const std::string& s, Color c={1,1,1},
+                  void* font=nullptr);
+#else
     void drawText(float x, float y, const std::string& s, Color c={1,1,1},
                   void* font=GLUT_BITMAP_HELVETICA_18);
+#endif
     void drawTextLarge(float x, float y, const std::string& s, Color c={1,1,1});
 
     // Keyboard handlers

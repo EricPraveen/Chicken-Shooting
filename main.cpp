@@ -10,7 +10,10 @@
 //   Timer/Game Loop (60 FPS)    — glutTimerFunc drives update+render
 // =============================================================================
 
-#ifdef __APPLE__
+#ifdef __EMSCRIPTEN__
+#  include <emscripten.h>
+#  include <GL/glut.h>
+#elif defined(__APPLE__)
 #  include <GLUT/glut.h>
 #else
 #  include <GL/glut.h>
@@ -28,6 +31,12 @@ void display_cb(){
     g_game->display();
 }
 
+#ifdef __EMSCRIPTEN__
+void emscripten_loop(){
+    g_game->update();
+    g_game->display();
+}
+#else
 // CG Concept 14/Timer: glutTimerFunc drives a fixed 60 FPS game loop.
 // update() advances simulation, then display() re-renders.
 void timer_cb(int){
@@ -36,6 +45,7 @@ void timer_cb(int){
     // Re-register the timer for next frame
     glutTimerFunc(FRAME_MS, timer_cb, 0);
 }
+#endif
 
 void keyboard_down_cb(unsigned char key, int /*x*/, int /*y*/){
     g_game->onKeyDown(key);
@@ -109,11 +119,16 @@ int main(int argc, char** argv){
     glutSpecialFunc(special_down_cb);
     glutSpecialUpFunc(special_up_cb);
 
+#ifdef __EMSCRIPTEN__
+    // Emscripten loop: 0 = use requestAnimationFrame, 1 = simulate infinite loop
+    emscripten_set_main_loop(emscripten_loop, 0, 1);
+#else
     // Start the 60 FPS timer loop
     glutTimerFunc(FRAME_MS, timer_cb, 0);
 
     // Hand control to GLUT event loop (never returns)
     glutMainLoop();
+#endif
 
     delete g_game;
     return 0;

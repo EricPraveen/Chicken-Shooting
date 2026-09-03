@@ -9,6 +9,16 @@
 #include <sstream>
 #include <iomanip>
 
+#ifdef __EMSCRIPTEN__
+#include "FontBitmap.h"
+#undef GLUT_BITMAP_HELVETICA_12
+#undef GLUT_BITMAP_HELVETICA_18
+#undef GLUT_BITMAP_TIMES_ROMAN_24
+#define GLUT_BITMAP_HELVETICA_12 nullptr
+#define GLUT_BITMAP_HELVETICA_18 nullptr
+#define GLUT_BITMAP_TIMES_ROMAN_24 nullptr
+#endif
+
 Game* g_game = nullptr;
 
 // ---------------------------------------------------------------------------
@@ -444,6 +454,15 @@ void Game::onKeyPress(unsigned char key){
 // ---------------------------------------------------------------------------
 // drawText helpers
 // ---------------------------------------------------------------------------
+#ifdef __EMSCRIPTEN__
+void Game::drawText(float x, float y, const std::string& s, Color c, void* /*font*/){
+    renderArcadeText(x, y, s, c, 1.6f);
+}
+
+void Game::drawTextLarge(float x, float y, const std::string& s, Color c){
+    renderArcadeText(x, y, s, c, 2.6f);
+}
+#else
 void Game::drawText(float x, float y, const std::string& s, Color c, void* font){
     c.apply();
     glRasterPos2f(x,y);
@@ -453,6 +472,7 @@ void Game::drawText(float x, float y, const std::string& s, Color c, void* font)
 void Game::drawTextLarge(float x, float y, const std::string& s, Color c){
     drawText(x,y,s,c,GLUT_BITMAP_TIMES_ROMAN_24);
 }
+#endif
 
 // ---------------------------------------------------------------------------
 // drawStarfield — scrolling parallax background stars

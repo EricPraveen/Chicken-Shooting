@@ -18,7 +18,9 @@
 #include <vector>
 #include <algorithm>
 
-#ifdef __APPLE__
+#ifdef __EMSCRIPTEN__
+#  include <GL/glut.h>
+#elif defined(__APPLE__)
 #  include <GLUT/glut.h>
 #else
 #  include <GL/glut.h>
@@ -152,10 +154,13 @@ inline void ddaLine(int x1,int y1,int x2,int y2, const Color& c){
     float xInc = (float)dx/steps;
     float yInc = (float)dy/steps;
     float x = x1, y = y1;
+    c.apply();
+    glBegin(GL_POINTS);
     for(int i=0;i<=steps;i++){
-        putPixel((int)std::round(x),(int)std::round(y),c);
+        glVertex2i((int)std::round(x),(int)std::round(y));
         x+=xInc; y+=yInc;
     }
+    glEnd();
 }
 
 // =============================================================================
@@ -167,13 +172,16 @@ inline void bresenhamLine(int x1,int y1,int x2,int y2, const Color& c){
     int dx=std::abs(x2-x1), dy=std::abs(y2-y1);
     int sx=(x1<x2)?1:-1, sy=(y1<y2)?1:-1;
     int err=dx-dy;
+    c.apply();
+    glBegin(GL_POINTS);
     while(true){
-        putPixel(x1,y1,c);
+        glVertex2i(x1,y1);
         if(x1==x2 && y1==y2) break;
         int e2=2*err;
         if(e2>-dy){ err-=dy; x1+=sx; }
         if(e2< dx){ err+=dx; y1+=sy; }
     }
+    glEnd();
 }
 
 // =============================================================================
@@ -182,20 +190,25 @@ inline void bresenhamLine(int x1,int y1,int x2,int y2, const Color& c){
 // Used for: shield bubble, coin outlines, boss aura.
 // =============================================================================
 inline void midpointCircle(int cx,int cy,int r, const Color& c, bool fill=false){
+    c.apply();
     if(fill){
+        glBegin(GL_LINES);
         for(int y=-r;y<=r;y++){
             int xSpan=(int)std::sqrt((float)(r*r - y*y));
-            for(int x=-xSpan;x<=xSpan;x++) putPixel(cx+x,cy+y,c);
+            glVertex2i(cx - xSpan, cy + y);
+            glVertex2i(cx + xSpan + 1, cy + y);
         }
+        glEnd();
         return;
     }
     int x=0, y=r;
     int p=1-r;
+    glBegin(GL_POINTS);
     auto plot8=[&](int px,int py){
-        putPixel(cx+px,cy+py,c); putPixel(cx-px,cy+py,c);
-        putPixel(cx+px,cy-py,c); putPixel(cx-px,cy-py,c);
-        putPixel(cx+py,cy+px,c); putPixel(cx-py,cy+px,c);
-        putPixel(cx+py,cy-px,c); putPixel(cx-py,cy-px,c);
+        glVertex2i(cx+px,cy+py); glVertex2i(cx-px,cy+py);
+        glVertex2i(cx+px,cy-py); glVertex2i(cx-px,cy-py);
+        glVertex2i(cx+py,cy+px); glVertex2i(cx-py,cy+px);
+        glVertex2i(cx+py,cy-px); glVertex2i(cx-py,cy-px);
     };
     plot8(x,y);
     while(x<y){
@@ -204,6 +217,7 @@ inline void midpointCircle(int cx,int cy,int r, const Color& c, bool fill=false)
         else { y--; p+=2*(x-y)+1; }
         plot8(x,y);
     }
+    glEnd();
 }
 
 // =============================================================================
@@ -216,6 +230,8 @@ inline void scanlineFill(const std::vector<Vec2>& verts, const Color& c){
     float yMin= verts[0].y, yMax=verts[0].y;
     for(auto& v:verts){ yMin=std::min(yMin,v.y); yMax=std::max(yMax,v.y); }
     int n=(int)verts.size();
+    c.apply();
+    glBegin(GL_LINES);
     for(int y=(int)yMin; y<=(int)yMax; y++){
         std::vector<float> xs;
         for(int i=0;i<n;i++){
@@ -226,10 +242,12 @@ inline void scanlineFill(const std::vector<Vec2>& verts, const Color& c){
             }
         }
         std::sort(xs.begin(),xs.end());
-        for(int i=0;i+1<(int)xs.size();i+=2)
-            for(int x=(int)xs[i];x<=(int)xs[i+1];x++)
-                putPixel(x,y,c);
+        for(int i=0;i+1<(int)xs.size();i+=2){
+            glVertex2i((int)xs[i], y);
+            glVertex2i((int)xs[i+1] + 1, y);
+        }
     }
+    glEnd();
 }
 
 // =============================================================================
