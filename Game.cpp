@@ -8,6 +8,7 @@
 #include <algorithm>
 #include <sstream>
 #include <iomanip>
+#include <chrono>
 
 #ifdef __EMSCRIPTEN__
 #include <emscripten.h>
@@ -72,12 +73,8 @@ extern "C" {
             g_game->playSfx("powerup");
             g_game->spawnWave();
             EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
-        } else if (g_game->state == GameState::PLAYING) {
-            g_game->state = GameState::PAUSED;
-            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(1); });
-        } else if (g_game->state == GameState::PAUSED) {
-            g_game->state = GameState::PLAYING;
-            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+        } else if (g_game->state == GameState::PLAYING || g_game->state == GameState::PAUSED) {
+            g_game->togglePause();
         } else if (g_game->state == GameState::GAME_OVER || g_game->state == GameState::WIN) {
             g_game->reset();
             g_game->state = GameState::MENU;
@@ -109,13 +106,33 @@ Game::Game()
       bgScroll(0), uiMessageTimer(0),
       notifiedEndGame(false),
       bossWarningActive(false), bossWarningTimer(0),
-      isMobile(false)
+      isMobile(false), lastPauseToggleTime(0)
 {
     srand((unsigned)time(nullptr));
     init();
 }
 
 Game::~Game() { delete boss; }
+
+void Game::togglePause() {
+    static auto lastToggle = std::chrono::steady_clock::now();
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(now - lastToggle).count();
+    if (elapsed < 200) return; // 200ms debounce using real wall clock time
+    lastToggle = now;
+
+    if (state == GameState::PLAYING) {
+        state = GameState::PAUSED;
+#ifdef __EMSCRIPTEN__
+        EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(1); });
+#endif
+    } else if (state == GameState::PAUSED) {
+        state = GameState::PLAYING;
+#ifdef __EMSCRIPTEN__
+        EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+#endif
+    }
+}
 
 // ---------------------------------------------------------------------------
 // init — set up stars and initial state
@@ -228,7 +245,7 @@ void Game::spawnWave(){
             float ey = startY - r*spacingY;
             if(ey > WIN_H-40) ey=WIN_H-40;
 
-            enemies.emplace_back(ex, ey, t);
+            enemies.emplace_back(ex, ey, t, level);
             enemies.back().setupEntry(pattern, r, c, rows, cols, ex, ey);
         }
     }
@@ -679,9 +696,7 @@ void Game::onKeyDown(unsigned char key){
         case 'd': case 'D': player.moveRight =true; break;
         case 'w': case 'W': player.moveUp    =true; break;
         case 's': case 'S': player.moveDown  =true; break;
-        case ' ':
-        case 'e': case 'E':
-        case 27:            player.isShooting =true; break; // ESC (27) & E trigger Force Shoot
+        case ' ':           player.isShooting =true; break; // ONLY Spacebar fires
     }
 }
 void Game::onKeyUp(unsigned char key){
@@ -690,9 +705,7 @@ void Game::onKeyUp(unsigned char key){
         case 'd': case 'D': player.moveRight =false; break;
         case 'w': case 'W': player.moveUp    =false; break;
         case 's': case 'S': player.moveDown  =false; break;
-        case ' ':
-        case 'e': case 'E':
-        case 27:            player.isShooting =false; break; // ESC (27) & E release Force Shoot
+        case ' ':           player.isShooting =false; break; // ONLY Spacebar releases fire
     }
 }
 void Game::onSpecialDown(int key){
@@ -726,20 +739,14 @@ void Game::onKeyPress(unsigned char key){
             }
             break;
         case GameState::PLAYING:
-            if(key=='p' || key=='P') {
-                state=GameState::PAUSED;
-#ifdef __EMSCRIPTEN__
-                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(1); });
-#endif
+            if(key=='p' || key=='P' || key==27) { // P or ESC pauses the game
+                togglePause();
             }
             if(key=='b' || key=='B'){ enemies.clear(); triggerBossWarning(); }
             break;
         case GameState::PAUSED:
-            if(key=='p' || key=='P') {
-                state=GameState::PLAYING;
-#ifdef __EMSCRIPTEN__
-                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
-#endif
+            if(key=='p' || key=='P' || key==27) { // P or ESC resumes the game
+                togglePause();
             }
             if(key=='q' || key=='Q'){
                 state=GameState::MENU;
@@ -1079,20 +1086,24 @@ void Game::drawMenu(){
             Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
             Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
     } else {
-        renderArcadeTextGlow(WIN_W/2-138, WIN_H/2+18, "PRESS START OR ENTER",
+        renderArcadeTextGlow(WIN_W/2-138, WIN_H/2+24, "PRESS START OR ENTER",
             Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
             Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
-        // Controls — dimmer secondary info
-        renderArcadeText(WIN_W/2-122, WIN_H/2-10, "WASD / ARROWS = MOVE",
-            Color(0.50f,0.50f,0.65f,0.85f), 1.4f);
-        renderArcadeText(WIN_W/2-140, WIN_H/2-30, "HOLD SPACE/ESC = SHOOT  P=PAUSE",
-            Color(0.42f,0.65f,0.55f,0.85f), 1.4f);
+        // Controls — clean centered hierarchy
+        renderArcadeText(WIN_W/2-118, WIN_H/2-2, "MOVE : WASD OR ARROWS",
+            Color(0.55f,0.75f,0.95f,0.88f), 1.35f);
+        renderArcadeText(WIN_W/2-110, WIN_H/2-22, "FIRE : HOLD SPACEBAR",
+            Color(0.40f,0.95f,0.65f,0.88f), 1.35f);
+        renderArcadeText(WIN_W/2-70, WIN_H/2-42, "PAUSE : P KEY",
+            Color(0.85f,0.65f,0.45f,0.88f), 1.35f);
     }
 #else
     drawText(WIN_W/2-80, WIN_H/2+20,"PRESS ENTER TO START", Color(1,1,1,blinkA));
-    drawText(WIN_W/2-100, WIN_H/2-10,"WASD or Arrow Keys to Move", Color(0.7f,0.7f,0.7f),
+    drawText(WIN_W/2-100, WIN_H/2-4,"MOVE : WASD or Arrow Keys", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
-    drawText(WIN_W/2-130, WIN_H/2-28,"Hold Space / Esc = Shoot | P = Pause", Color(0.7f,0.7f,0.7f),
+    drawText(WIN_W/2-85, WIN_H/2-24,"FIRE : Hold Spacebar", Color(0.7f,0.7f,0.7f),
+             GLUT_BITMAP_HELVETICA_12);
+    drawText(WIN_W/2-85, WIN_H/2-44,"PAUSE : P Key", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
 #endif
 
