@@ -1074,6 +1074,208 @@
             50%, 100% { opacity: 0; }
         }
 
+        /* ── Virtual Arcade Gamepad Deck ── */
+        .virtual-gamepad {
+            display: none;
+            width: 100%;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 18px;
+            background: linear-gradient(180deg, #101520 0%, #090c12 100%);
+            border: 1px solid #1e2838;
+            border-top: 2px solid rgba(0, 229, 255, 0.35);
+            border-radius: 0 0 6px 6px;
+            box-shadow: inset 0 2px 10px rgba(0, 229, 255, 0.06), 0 8px 24px rgba(0, 0, 0, 0.6);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        @media (max-width: 900px), (pointer: coarse) {
+            .virtual-gamepad {
+                display: flex;
+            }
+        }
+        .virtual-gamepad.force-show {
+            display: flex !important;
+        }
+
+        /* Left side: 4-Way Cross D-Pad */
+        .dpad-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .dpad-cross {
+            position: relative;
+            width: 124px;
+            height: 124px;
+            background: #131924;
+            border-radius: 12px;
+            box-shadow: inset 0 0 8px #000, 0 4px 12px rgba(0, 0, 0, 0.5);
+            border: 1px solid #233045;
+        }
+        .dpad-core {
+            position: absolute;
+            top: 42px;
+            left: 42px;
+            width: 40px;
+            height: 40px;
+            background: #1a2332;
+            border-radius: 50%;
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+        }
+        .dpad-btn {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: linear-gradient(180deg, #222d40 0%, #151d2b 100%);
+            border: 1px solid #364761;
+            color: var(--retro-cyan);
+            font-size: 1.15rem;
+            font-family: monospace;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            outline: none;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.08s;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+        }
+        .dpad-btn-up {
+            top: 4px;
+            left: 42px;
+            border-radius: 6px 6px 0 0;
+        }
+        .dpad-btn-down {
+            bottom: 4px;
+            left: 42px;
+            border-radius: 0 0 6px 6px;
+        }
+        .dpad-btn-left {
+            top: 42px;
+            left: 4px;
+            border-radius: 6px 0 0 6px;
+        }
+        .dpad-btn-right {
+            top: 42px;
+            right: 4px;
+            border-radius: 0 6px 6px 0;
+        }
+        .dpad-btn:active, .dpad-btn.pressed {
+            background: #00e5ff !important;
+            color: #06080d !important;
+            border-color: #00ffff !important;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.85), inset 0 2px 4px rgba(0,0,0,0.4) !important;
+            transform: scale(0.94);
+        }
+
+        /* Center: Start / Pause button */
+        .gamepad-mid-zone {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+        .gamepad-pill-btn {
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            letter-spacing: 1px;
+            background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
+            border: 1px solid #374151;
+            color: #fbbf24;
+            padding: 9px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1);
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            transition: all 0.1s;
+        }
+        .gamepad-pill-btn:active, .gamepad-pill-btn.pressed {
+            background: #f59e0b !important;
+            color: #000 !important;
+            border-color: #fbbf24 !important;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.8) !important;
+            transform: scale(0.95);
+        }
+        .pill-dot {
+            width: 7px;
+            height: 7px;
+            background: #fbbf24;
+            border-radius: 50%;
+            box-shadow: 0 0 6px #fbbf24;
+        }
+
+        /* Right side: Big Arcade Fire Button */
+        .fire-zone {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .fire-arcade-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            outline: none;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+            padding: 0;
+        }
+        .fire-btn-rim {
+            width: 86px;
+            height: 86px;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #374151, #111827);
+            padding: 6px;
+            box-shadow: 0 8px 18px rgba(0, 0, 0, 0.7), inset 0 2px 3px rgba(255, 255, 255, 0.2);
+            border: 2px solid #4b5563;
+            transition: transform 0.08s;
+        }
+        .fire-btn-cap {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ff4b4b 0%, #d61f1f 60%, #8b0000 100%);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            box-shadow: inset 0 3px 6px rgba(255, 255, 255, 0.4), inset 0 -4px 8px rgba(0, 0, 0, 0.6), 0 0 10px rgba(255, 59, 48, 0.3);
+            border: 1px solid #ff7878;
+        }
+        .fire-icon {
+            font-size: 1.2rem;
+            line-height: 1;
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.6));
+        }
+        .fire-txt {
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            color: #fff;
+            letter-spacing: 1px;
+            text-shadow: 0 1px 3px #000;
+        }
+        .fire-arcade-btn:active .fire-btn-rim,
+        .fire-arcade-btn.pressed .fire-btn-rim {
+            transform: scale(0.92);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.9);
+        }
+        .fire-arcade-btn:active .fire-btn-cap,
+        .fire-arcade-btn.pressed .fire-btn-cap {
+            background: radial-gradient(circle at 35% 30%, #ff7373 0%, #ff2e2e 60%, #b30000 100%);
+            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 59, 48, 0.95);
+        }
+
         /* ── Responsive ── */
         @media (max-width: 960px) {
             h1 { font-size: 1.0rem; }
@@ -1082,6 +1284,15 @@
             h1 { font-size: 0.75rem; letter-spacing: 1px; }
             .controls-card { gap: 10px; padding: 6px 12px; font-size: 0.90rem; }
             .modal-box { padding: 18px 14px; }
+            .dpad-cross { width: 110px; height: 110px; }
+            .dpad-btn { width: 36px; height: 36px; font-size: 1.0rem; }
+            .dpad-core { top: 37px; left: 37px; width: 36px; height: 36px; }
+            .dpad-btn-up { top: 3px; left: 37px; }
+            .dpad-btn-down { bottom: 3px; left: 37px; }
+            .dpad-btn-left { top: 37px; left: 3px; }
+            .dpad-btn-right { top: 37px; right: 3px; }
+            .fire-btn-rim { width: 74px; height: 74px; }
+            .gamepad-pill-btn { font-size: 0.46rem; padding: 7px 12px; }
         }
     </style>
 </head>
@@ -1099,7 +1310,8 @@
     <div class="arcade-cabinet">
         <div class="cabinet-header">
             <div class="cabinet-badge">ARCADE SYSTEM // 60 FPS</div>
-            <div style="display: flex; align-items: center; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <button id="btnTouchToggle" class="cabinet-btn-audio" type="button" title="Toggle Virtual Touch Controls">📱 TOUCH</button>
                 <button id="btnAudioToggle" class="cabinet-btn-audio" type="button" title="Toggle Sound (M)">🔊 SFX ON</button>
                 <div class="cabinet-led">PWR</div>
             </div>
@@ -1110,6 +1322,40 @@
                 <div>LOADING...</div>
             </div>
             <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()" tabindex="-1"></canvas>
+        </div>
+
+        <!-- Virtual Arcade Touch Deck -->
+        <div id="virtualGamepad" class="virtual-gamepad">
+            <!-- Left: 4-Way Cross D-Pad -->
+            <div class="dpad-zone">
+                <div class="dpad-cross">
+                    <button id="btnDpadUp" class="dpad-btn dpad-btn-up" type="button" aria-label="Move Up">▲</button>
+                    <button id="btnDpadLeft" class="dpad-btn dpad-btn-left" type="button" aria-label="Move Left">◀</button>
+                    <div class="dpad-core"></div>
+                    <button id="btnDpadRight" class="dpad-btn dpad-btn-right" type="button" aria-label="Move Right">▶</button>
+                    <button id="btnDpadDown" class="dpad-btn dpad-btn-down" type="button" aria-label="Move Down">▼</button>
+                </div>
+            </div>
+
+            <!-- Center: Start / Pause Utility -->
+            <div class="gamepad-mid-zone">
+                <button id="btnGamepadStart" class="gamepad-pill-btn" type="button">
+                    <span class="pill-dot"></span>
+                    <span>START / PAUSE</span>
+                </button>
+            </div>
+
+            <!-- Right: Big Arcade Fire Button -->
+            <div class="fire-zone">
+                <button id="btnFire" class="fire-arcade-btn" type="button" aria-label="Fire Lasers">
+                    <div class="fire-btn-rim">
+                        <div class="fire-btn-cap">
+                            <span class="fire-icon">🔥</span>
+                            <span class="fire-txt">FIRE</span>
+                        </div>
+                    </div>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2162,6 +2408,119 @@
                 RetroAudio.setEnabled(!RetroAudio.isEnabled());
                 updateAudioBtn();
                 if (RetroAudio.isEnabled()) RetroAudio.playCoin();
+                canvasElement.focus();
+            });
+        }
+
+        // ── Virtual Touch Controls ──────────────────────────────────────────
+        var gamepadState = {
+            up: false,
+            down: false,
+            left: false,
+            right: false,
+            fire: false
+        };
+
+        function setMoveUp(active) {
+            if (gamepadState.up === active) return;
+            gamepadState.up = active;
+            if (typeof Module !== 'undefined' && Module._wasm_set_move_up) {
+                Module._wasm_set_move_up(active ? 1 : 0);
+            }
+        }
+
+        function setMoveDown(active) {
+            if (gamepadState.down === active) return;
+            gamepadState.down = active;
+            if (typeof Module !== 'undefined' && Module._wasm_set_move_down) {
+                Module._wasm_set_move_down(active ? 1 : 0);
+            }
+        }
+
+        function setMoveLeft(active) {
+            if (gamepadState.left === active) return;
+            gamepadState.left = active;
+            if (typeof Module !== 'undefined' && Module._wasm_set_move_left) {
+                Module._wasm_set_move_left(active ? 1 : 0);
+            }
+        }
+
+        function setMoveRight(active) {
+            if (gamepadState.right === active) return;
+            gamepadState.right = active;
+            if (typeof Module !== 'undefined' && Module._wasm_set_move_right) {
+                Module._wasm_set_move_right(active ? 1 : 0);
+            }
+        }
+
+        function setShooting(active) {
+            if (gamepadState.fire === active) return;
+            gamepadState.fire = active;
+            if (typeof Module !== 'undefined' && Module._wasm_set_shooting) {
+                Module._wasm_set_shooting(active ? 1 : 0);
+            }
+            if (active && navigator.vibrate) {
+                try { navigator.vibrate(12); } catch(e) {}
+            }
+        }
+
+        function pressStart() {
+            if (typeof Module !== 'undefined' && Module._wasm_press_start) {
+                Module._wasm_press_start();
+            }
+            if (navigator.vibrate) {
+                try { navigator.vibrate(15); } catch(e) {}
+            }
+        }
+
+        function bindTouchBtn(el, onActive, onInactive) {
+            if (!el) return;
+            function handleStart(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                el.classList.add('pressed');
+                onActive();
+            }
+            function handleEnd(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                el.classList.remove('pressed');
+                onInactive();
+            }
+            el.addEventListener('touchstart', handleStart, { passive: false });
+            el.addEventListener('touchend', handleEnd, { passive: false });
+            el.addEventListener('touchcancel', handleEnd, { passive: false });
+            el.addEventListener('mousedown', handleStart);
+            el.addEventListener('mouseup', handleEnd);
+            el.addEventListener('mouseleave', handleEnd);
+        }
+
+        bindTouchBtn(document.getElementById('btnDpadUp'), function(){ setMoveUp(true); }, function(){ setMoveUp(false); });
+        bindTouchBtn(document.getElementById('btnDpadDown'), function(){ setMoveDown(true); }, function(){ setMoveDown(false); });
+        bindTouchBtn(document.getElementById('btnDpadLeft'), function(){ setMoveLeft(true); }, function(){ setMoveLeft(false); });
+        bindTouchBtn(document.getElementById('btnDpadRight'), function(){ setMoveRight(true); }, function(){ setMoveRight(false); });
+        bindTouchBtn(document.getElementById('btnFire'), function(){ setShooting(true); }, function(){ setShooting(false); });
+
+        var btnGamepadStart = document.getElementById('btnGamepadStart');
+        if (btnGamepadStart) {
+            function handleStartTap(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                pressStart();
+            }
+            btnGamepadStart.addEventListener('touchstart', handleStartTap, { passive: false });
+            btnGamepadStart.addEventListener('click', handleStartTap);
+        }
+
+        // Toggle touch gamepad visibility
+        var btnTouchToggle = document.getElementById('btnTouchToggle');
+        var virtualGamepad = document.getElementById('virtualGamepad');
+        if (btnTouchToggle && virtualGamepad) {
+            btnTouchToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                virtualGamepad.classList.toggle('force-show');
+                var isForced = virtualGamepad.classList.contains('force-show');
+                btnTouchToggle.classList.toggle('active', isForced);
                 canvasElement.focus();
             });
         }
