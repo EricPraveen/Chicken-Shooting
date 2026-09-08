@@ -222,22 +222,24 @@ void Game::spawnWave(){
 // Spawn explosion particles
 // ---------------------------------------------------------------------------
 void Game::spawnExplosion(float x, float y, Color c, int count){
-    for(int i=0;i<count;i++){
+    if(particles.size() > 80) return; // Prevent particle flooding during multi-kills
+    int pCount = std::min(count, 16);
+    for(int i=0;i<pCount;i++){
         float angle = randF(0, 2*PI);
-        float speed = randF(1.5f, 6.0f);
-        float life  = randF(20, 50);
-        float sz    = randF(2, 6);
+        float speed = randF(1.5f, 5.0f);
+        float life  = randF(15, 35);
+        float sz    = randF(2, 4.5f);
         particles.emplace_back(x,y,
             speed*std::cos(angle), speed*std::sin(angle),
             life, c, sz);
     }
     // Avian feather particle bursts
-    int featherCount = count / 3 + 2;
+    int featherCount = std::min(count / 3 + 1, 5);
     for(int i=0;i<featherCount;i++){
         float angle = randF(0, 2*PI);
-        float speed = randF(0.8f, 3.0f);
-        float life  = randF(35, 65);
-        float sz    = randF(3, 6);
+        float speed = randF(0.8f, 2.5f);
+        float life  = randF(25, 45);
+        float sz    = randF(2.5f, 4.5f);
         particles.emplace_back(x,y,
             speed*std::cos(angle), speed*std::sin(angle) + 0.8f,
             life, Color(0.96f, 0.94f, 0.88f), sz);
@@ -742,27 +744,27 @@ void Game::drawTextLarge(float x, float y, const std::string& s, Color c){
 // drawStarfield — scrolling parallax background stars
 // ---------------------------------------------------------------------------
 void Game::drawStarfield(){
+    glPointSize(2.0f);
+    glBegin(GL_POINTS);
     for(auto& s : stars){
-        // Twinkle: brightness oscillates with per-star phase offset
         float twinkle = 0.55f + 0.45f*std::abs(std::sin(s.animPhase));
         float alpha = s.brightness * twinkle;
-        // Color temperature: fast stars are slightly blue, slow are warm
         float warm = 1.0f - 0.3f*(s.speed-0.3f)/1.7f;
-        Color sc(warm*alpha, warm*alpha*0.95f, alpha, alpha);
-        sc.apply();
-        glPointSize(s.size * (0.8f + 0.4f*twinkle));
-        glBegin(GL_POINTS);
-            glVertex2f(s.x, s.y);
-        glEnd();
-        // Add a cross-shaped sparkle for bright large stars
-        if(s.size > 2.0f && twinkle > 0.85f){
-            float sa = alpha*0.5f;
-            Color sparkC(sa,sa,alpha,sa);
+        glColor4f(warm*alpha, warm*alpha*0.95f, alpha, alpha);
+        glVertex2f(s.x, s.y);
+    }
+    glEnd();
+    glPointSize(1.0f);
+
+    // Subtle cross sparkle on the brightest large stars (at most a few per frame)
+    for(auto& s : stars){
+        if(s.size > 2.2f && std::sin(s.animPhase) > 0.90f){
+            float sa = s.brightness * 0.45f;
+            Color sparkC(sa,sa,sa,sa);
             bresenhamLine((int)s.x-2,(int)s.y,(int)s.x+2,(int)s.y, sparkC);
             bresenhamLine((int)s.x,(int)s.y-2,(int)s.x,(int)s.y+2, sparkC);
         }
     }
-    glPointSize(1.0f);
 }
 
 // ---------------------------------------------------------------------------
@@ -798,49 +800,49 @@ void Game::drawHUD(){
     // ── HP bar — retro LCD style ──────────────────────────────────────────────
     float hpFrac=(float)player.hp/player.maxHp;
     // Bar track
-    drawRect(10,10,202,17, Color(0.08f,0.08f,0.10f));
-    drawRectOutline(10,10,202,17, Color(0.38f,0.32f,0.55f),1.5f);
+    drawRect(22,10,202,17, Color(0.08f,0.08f,0.10f));
+    drawRectOutline(22,10,202,17, Color(0.38f,0.32f,0.55f),1.5f);
     // Filled portion
     Color hpCol=(hpFrac>0.5f)?Color(0.12f,0.88f,0.22f):(hpFrac>0.25f)?Color(1.0f,0.72f,0.0f):Color(0.92f,0.10f,0.10f);
-    drawRect(11,11,200*hpFrac,15,hpCol);
+    drawRect(23,11,200*hpFrac,15,hpCol);
     // Scanline overlay on bar — every 3 pixels a semi-transparent dark stripe
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(int scanY=11; scanY<26; scanY+=3){
-        drawRect(11,scanY,200*hpFrac,1, Color(0,0,0,0.18f));
+        drawRect(23,scanY,200*hpFrac,1, Color(0,0,0,0.18f));
     }
     glDisable(GL_BLEND);
     // HP label
 #ifdef __EMSCRIPTEN__
-    renderArcadeText(14, 14, "HP "+std::to_string(player.hp), Color(0.9f,0.9f,1.0f), 1.4f);
+    renderArcadeText(26, 14, "HP "+std::to_string(player.hp), Color(0.9f,0.9f,1.0f), 1.4f);
 #else
-    drawText(12,13,"HP: "+std::to_string(player.hp)+"/"+std::to_string(player.maxHp),
+    drawText(24,13,"HP: "+std::to_string(player.hp)+"/"+std::to_string(player.maxHp),
         Color(1,1,1), GLUT_BITMAP_HELVETICA_12);
 #endif
 
     // ── Score — arcade cyan with shadow ──────────────────────────────────────
 #ifdef __EMSCRIPTEN__
-    renderArcadeTextWithShadow(10, 40, "SCORE "+std::to_string(player.score),
+    renderArcadeTextWithShadow(22, 40, "SCORE "+std::to_string(player.score),
         Color(0.0f,0.95f,0.85f), 1.7f, 1.5f, Color(0,0,0,0.7f));
     // Coins — retro amber
-    renderArcadeTextWithShadow(10, 65, "COINS "+std::to_string(player.coins),
+    renderArcadeTextWithShadow(22, 65, "COINS "+std::to_string(player.coins),
         Color(1.0f,0.70f,0.20f), 1.5f, 1.2f);
     // Level — outlined for emphasis
-    renderArcadeTextOutlined(10, 90, "LVL "+std::to_string(level),
+    renderArcadeTextOutlined(22, 90, "LVL "+std::to_string(level),
         Color(0.4f,0.92f,1.0f), 1.7f, Color(0.0f,0.25f,0.35f,0.85f));
 #else
-    drawText(10,40,"SCORE: "+std::to_string(player.score), Color(1,1,0.3f));
-    drawText(10,65,"COINS: "+std::to_string(player.coins), Color(1,0.85f,0));
-    drawText(10,90,"LEVEL: "+std::to_string(level), Color(0.5f,0.9f,1.0f));
+    drawText(22,40,"SCORE: "+std::to_string(player.score), Color(1,1,0.3f));
+    drawText(22,65,"COINS: "+std::to_string(player.coins), Color(1,0.85f,0));
+    drawText(22,90,"LEVEL: "+std::to_string(level), Color(0.5f,0.9f,1.0f));
 #endif
 
     // ── LIVES display (mini ship icons) ──────────────────────────────────────
 #ifdef __EMSCRIPTEN__
-    renderArcadeText(10, 118, "LIVES", Color(1.0f,0.42f,0.42f), 1.4f);
+    renderArcadeText(22, 118, "LIVES", Color(1.0f,0.42f,0.42f), 1.4f);
 #else
-    drawText(10, 118, "LIVES:", Color(1.0f,0.55f,0.55f), GLUT_BITMAP_HELVETICA_12);
+    drawText(22, 118, "LIVES:", Color(1.0f,0.55f,0.55f), GLUT_BITMAP_HELVETICA_12);
 #endif
     for(int i=0;i<player.maxLives;i++){
-        float lx = 62.0f + i*30.0f;
+        float lx = 74.0f + i*30.0f;
         float lcy = 118.0f;
         if(i < player.lives){
             std::vector<Vec2> shipMini={
@@ -871,24 +873,24 @@ void Game::drawHUD(){
     // ── FOOD progress bar toward next life ───────────────────────────────────
     float foodPct = (float)player.foodCollected / (float)Player::foodForLife;
 #ifdef __EMSCRIPTEN__
-    renderArcadeText(10, 148, "FOOD", Color(0.30f,0.88f,0.30f), 1.4f);
+    renderArcadeText(22, 148, "FOOD", Color(0.30f,0.88f,0.30f), 1.4f);
 #else
-    drawText(10, 148, "FOOD:", Color(0.4f,0.9f,0.4f), GLUT_BITMAP_HELVETICA_12);
+    drawText(22, 148, "FOOD:", Color(0.4f,0.9f,0.4f), GLUT_BITMAP_HELVETICA_12);
 #endif
-    drawRect(52, 145, 96, 11, Color(0.06f,0.14f,0.06f));
-    drawRect(52, 145, 96*foodPct, 11, Color(0.20f+0.25f*foodPct, 0.85f, 0.20f));
+    drawRect(64, 145, 96, 11, Color(0.06f,0.14f,0.06f));
+    drawRect(64, 145, 96*foodPct, 11, Color(0.20f+0.25f*foodPct, 0.85f, 0.20f));
     // Scanline on food bar
     glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(int scanY=145; scanY<156; scanY+=3)
-        drawRect(52,scanY,96*foodPct,1, Color(0,0,0,0.18f));
+        drawRect(64,scanY,96*foodPct,1, Color(0,0,0,0.18f));
     glDisable(GL_BLEND);
-    drawRectOutline(52, 145, 96, 11, Color(0.30f,0.55f,0.30f),1.2f);
+    drawRectOutline(64, 145, 96, 11, Color(0.30f,0.55f,0.30f),1.2f);
 #ifdef __EMSCRIPTEN__
-    renderArcadeText(153, 148,
+    renderArcadeText(165, 148,
         std::to_string(player.foodCollected)+"/"+std::to_string(Player::foodForLife),
         Color(0.6f,1.0f,0.6f), 1.3f);
 #else
-    drawText(153, 148,
+    drawText(165, 148,
         std::to_string(player.foodCollected)+"/"+std::to_string(Player::foodForLife)+" for LIFE",
         Color(0.7f,1.0f,0.7f), GLUT_BITMAP_HELVETICA_12);
 #endif
@@ -1394,7 +1396,7 @@ void Game::display(){
                 if(!p.active) continue;
                 float alpha=p.life/p.maxLife;
                 Color pc=p.color; pc.a*=alpha;
-                drawCircle(p.x,p.y,p.size*alpha,pc);
+                drawCircle(p.x,p.y,p.size*alpha,pc, 8);
             }
             glDisable(GL_BLEND);
 
