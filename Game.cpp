@@ -10,6 +10,7 @@
 #include <iomanip>
 
 #ifdef __EMSCRIPTEN__
+#include <emscripten.h>
 #include "FontBitmap.h"
 #undef GLUT_BITMAP_HELVETICA_12
 #undef GLUT_BITMAP_HELVETICA_18
@@ -21,6 +22,24 @@
 
 Game* g_game = nullptr;
 
+#ifdef __EMSCRIPTEN__
+extern "C" {
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_restart_game() {
+        if (g_game) {
+            g_game->state = GameState::PLAYING;
+            g_game->reset();
+            g_game->spawnWave();
+        }
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    int wasm_get_score() {
+        return g_game ? g_game->player.score : 0;
+    }
+}
+#endif
+
 // ---------------------------------------------------------------------------
 // Constructor / Destructor
 // ---------------------------------------------------------------------------
@@ -29,7 +48,8 @@ Game::Game()
       boss(nullptr), bossSpawned(false),
       enemySpawnTimer(0), enemySpawnRate(120),
       powerupTimer(0), coinTimer(0),
-      bgScroll(0), uiMessageTimer(0)
+      bgScroll(0), uiMessageTimer(0),
+      notifiedEndGame(false)
 {
     srand((unsigned)time(nullptr));
     init();
@@ -74,6 +94,23 @@ void Game::reset(){
     coinTimer=0;
     bgScroll=0;
     uiMessage=""; uiMessageTimer=0;
+    notifiedEndGame=false;
+}
+
+// ---------------------------------------------------------------------------
+// checkEndGameNotification — notify frontend via Emscripten bridge
+// ---------------------------------------------------------------------------
+void Game::checkEndGameNotification(){
+    if ((state == GameState::GAME_OVER || state == GameState::WIN) && !notifiedEndGame) {
+        notifiedEndGame = true;
+#ifdef __EMSCRIPTEN__
+        EM_ASM({
+            if (window.onGameFinished) {
+                window.onGameFinished($0, $1, $2);
+            }
+        }, player.score, (state == GameState::WIN ? 1 : 0), player.coins);
+#endif
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -347,14 +384,20 @@ void Game::update(){
 
     // Level complete — boss dead
     if(bossSpawned && boss && !boss->active && enemies.empty()){
-        if(level >= 3){ state=GameState::WIN; return; }
+        if(level >= 3){
+            state=GameState::WIN;
+            checkEndGameNotification();
+            return;
+        }
         nextLevel();
     }
 
     // Enemy reaches bottom → game over
     for(auto& e : enemies){
         if(e.active && e.y < 50){
-            state=GameState::GAME_OVER; return;
+            state=GameState::GAME_OVER;
+            checkEndGameNotification();
+            return;
         }
     }
 
@@ -374,6 +417,7 @@ void Game::update(){
         } else {
             spawnExplosion(player.x, player.y, Color(1,0.2f,0.0f), 55);
             state=GameState::GAME_OVER;
+            checkEndGameNotification();
         }
     }
 }
