@@ -407,6 +407,9 @@
             padding: 16px;
             animation: fadeIn 0.2s ease-out forwards;
         }
+        .modal-backdrop.show {
+            display: flex !important;
+        }
         @keyframes fadeIn {
             from { opacity: 0; }
             to { opacity: 1; }
@@ -447,6 +450,62 @@
             border: 1px solid rgba(50, 70, 95, 0.35);
             border-radius: 3px;
             pointer-events: none;
+        }
+
+        .modal-box.pause-modal-box {
+            max-width: 420px;
+            padding: 24px 28px;
+            border-color: rgba(0, 255, 170, 0.4);
+            box-shadow: 0 0 35px rgba(0, 255, 170, 0.18), 0 25px 60px rgba(0, 0, 0, 0.95);
+        }
+        .tag-paused {
+            background: rgba(0, 40, 25, 0.85);
+            color: #00ffaa;
+            border: 1px solid rgba(0, 255, 170, 0.6);
+            text-shadow: 0 0 8px rgba(0, 255, 170, 0.5);
+        }
+        .btn-pause-resume {
+            width: 100%;
+            padding: 13px 20px;
+            font-family: var(--font-pixel);
+            font-size: 0.62rem;
+            letter-spacing: 1.5px;
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+            color: #fff;
+            border: 2px solid #34d399;
+            border-radius: 4px;
+            cursor: pointer;
+            box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+            transition: all 0.15s;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-pause-resume:hover, .btn-pause-resume:active {
+            background: #10b981;
+            box-shadow: 0 0 22px rgba(52, 211, 153, 0.8);
+            transform: translateY(-1px);
+        }
+        .btn-pause-quit {
+            width: 100%;
+            padding: 11px 20px;
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            letter-spacing: 1px;
+            background: #19202e;
+            color: #cbd5e1;
+            border: 1px solid #3b4c63;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-pause-quit:hover, .btn-pause-quit:active {
+            background: #253147;
+            color: #fff;
+            border-color: #94a3b8;
         }
 
         .modal-box.leaderboard-box {
@@ -1762,6 +1821,25 @@
         </div>
     </div>
 
+    <!-- Modal: Interactive Pause Overlay -->
+    <div id="pauseModalBackdrop" class="modal-backdrop">
+        <div class="modal-box pause-modal-box">
+            <span class="modal-tag tag-paused">SYSTEM PAUSED</span>
+            <h2 class="modal-title" style="color: #00ffaa; text-shadow: 0 0 14px rgba(0,255,170,0.6); margin: 6px 0 4px 0;">GAME PAUSED</h2>
+            <div style="font-family: var(--font-pixel); font-size: 0.50rem; color: #94a3b8; margin: 4px 0 18px 0; letter-spacing: 1px;">
+                PAUSED // READY WHEN YOU ARE
+            </div>
+            <div class="modal-buttons" style="flex-direction: column; gap: 10px; width: 100%;">
+                <button id="btnPauseResume" class="btn-pause-resume" type="button">
+                    ▶ CONTINUE GAME
+                </button>
+                <button id="btnPauseQuit" class="btn-pause-quit" type="button">
+                    🚪 QUIT TO MAIN MENU
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal 2: Global Leaderboard View -->
     <div id="leaderboardModalBackdrop" class="modal-backdrop">
         <div class="modal-box leaderboard-box">
@@ -2420,6 +2498,58 @@
         }
 
         document.getElementById('btnPlayAgain').addEventListener('click', restartGame);
+
+        // ================================================================
+        // INTERACTIVE PAUSE OVERLAY EVENT HANDLERS
+        // ================================================================
+        var pauseModalBackdrop = document.getElementById('pauseModalBackdrop');
+        var btnPauseResume = document.getElementById('btnPauseResume');
+        var btnPauseQuit = document.getElementById('btnPauseQuit');
+
+        window.onPauseStateChanged = function(isPaused) {
+            if (!pauseModalBackdrop) return;
+            if (isPaused) {
+                pauseModalBackdrop.classList.add('show');
+                pauseModalBackdrop.style.display = 'flex';
+            } else {
+                pauseModalBackdrop.classList.remove('show');
+                pauseModalBackdrop.style.display = 'none';
+            }
+        };
+
+        if (btnPauseResume) {
+            function handleResume(e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                pressStart();
+                if (pauseModalBackdrop) {
+                    pauseModalBackdrop.classList.remove('show');
+                    pauseModalBackdrop.style.display = 'none';
+                }
+            }
+            btnPauseResume.addEventListener('touchstart', handleResume, { passive: false });
+            btnPauseResume.addEventListener('click', handleResume);
+        }
+
+        if (btnPauseQuit) {
+            function handleQuit(e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (typeof Module !== 'undefined' && Module._wasm_restart_game) {
+                    Module._wasm_restart_game();
+                }
+                if (pauseModalBackdrop) {
+                    pauseModalBackdrop.classList.remove('show');
+                    pauseModalBackdrop.style.display = 'none';
+                }
+            }
+            btnPauseQuit.addEventListener('touchstart', handleQuit, { passive: false });
+            btnPauseQuit.addEventListener('click', handleQuit);
+        }
 
         // ================================================================
         // RETRO CHIPTUNE WEB AUDIO SYNTHESIZER
