@@ -212,6 +212,28 @@
             background: #22c55e;
             box-shadow: 0 0 8px #22c55e;
         }
+        .cabinet-btn-audio {
+            font-family: var(--font-pixel);
+            font-size: 0.44rem;
+            letter-spacing: 1px;
+            background: #111722;
+            border: 1px solid #28374d;
+            color: var(--retro-cyan);
+            padding: 3px 8px;
+            border-radius: 2px;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+        .cabinet-btn-audio:hover {
+            background: #1a2538;
+            border-color: var(--retro-cyan);
+            color: #fff;
+        }
+        .cabinet-btn-audio.muted {
+            color: #64748b;
+            border-color: #1e293b;
+            background: #0d111a;
+        }
 
         /* ── Canvas container: arcade screen bezel with CRT scanlines ── */
         .canvas-container {
@@ -1077,7 +1099,10 @@
     <div class="arcade-cabinet">
         <div class="cabinet-header">
             <div class="cabinet-badge">ARCADE SYSTEM // 60 FPS</div>
-            <div class="cabinet-led">PWR</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <button id="btnAudioToggle" class="cabinet-btn-audio" type="button" title="Toggle Sound (M)">🔊 SFX ON</button>
+                <div class="cabinet-led">PWR</div>
+            </div>
         </div>
         <div class="canvas-container">
             <div id="loadingStatus" class="status-spinner">
@@ -1837,6 +1862,309 @@
         }
 
         document.getElementById('btnPlayAgain').addEventListener('click', restartGame);
+
+        // ================================================================
+        // RETRO CHIPTUNE WEB AUDIO SYNTHESIZER
+        // ================================================================
+        var RetroAudio = (function() {
+            var ctx = null;
+            var enabled = true;
+            try {
+                var stored = localStorage.getItem('chicken_sfx_enabled');
+                if (stored !== null) enabled = (stored === '1');
+            } catch(e){}
+
+            function getCtx() {
+                if (!ctx) {
+                    var AudioContext = window.AudioContext || window.webkitAudioContext;
+                    if (AudioContext) {
+                        ctx = new AudioContext();
+                    }
+                }
+                if (ctx && ctx.state === 'suspended') {
+                    ctx.resume();
+                }
+                return ctx;
+            }
+
+            // Unlock audio on first user gesture
+            function unlock() {
+                var c = getCtx();
+                if (c && c.state === 'suspended') {
+                    c.resume();
+                }
+            }
+            window.addEventListener('click', unlock, { once: true });
+            window.addEventListener('keydown', unlock, { once: true });
+
+            return {
+                setEnabled: function(val) {
+                    enabled = !!val;
+                    try { localStorage.setItem('chicken_sfx_enabled', enabled ? '1' : '0'); } catch(e){}
+                },
+                isEnabled: function() {
+                    return enabled;
+                },
+                // 1. Crisp Plasma Zap (Galaga / Chicken Invaders style)
+                playLaser: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(1250, now);
+                    osc.frequency.exponentialRampToValueAtTime(320, now + 0.055);
+
+                    gain.gain.setValueAtTime(0.24, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.055);
+
+                    // Add crisp transient click for punchy trigger feel
+                    var click = c.createOscillator();
+                    var clickGain = c.createGain();
+                    click.type = 'sine';
+                    click.frequency.setValueAtTime(1800, now);
+                    click.frequency.exponentialRampToValueAtTime(450, now + 0.015);
+                    clickGain.gain.setValueAtTime(0.12, now);
+                    clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.015);
+
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    click.connect(clickGain);
+                    clickGain.connect(c.destination);
+
+                    osc.start(now);
+                    click.start(now);
+                    osc.stop(now + 0.055);
+                    click.stop(now + 0.015);
+                },
+                // 2. Chicken Squawk / Hit
+                playChickenHit: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(520, now);
+                    osc.frequency.linearRampToValueAtTime(740, now + 0.03);
+                    osc.frequency.exponentialRampToValueAtTime(220, now + 0.10);
+                    gain.gain.setValueAtTime(0.20, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.10);
+                },
+                // 3. Crunchy 8-bit Explosion (White noise + sub square)
+                playExplosion: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var bufferSize = Math.floor(c.sampleRate * 0.25);
+                    var buffer = c.createBuffer(1, bufferSize, c.sampleRate);
+                    var data = buffer.getChannelData(0);
+                    for (var i = 0; i < bufferSize; i++) {
+                        data[i] = Math.random() * 2 - 1;
+                    }
+                    var noise = c.createBufferSource();
+                    noise.buffer = buffer;
+
+                    var filter = c.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(1100, now);
+                    filter.frequency.exponentialRampToValueAtTime(90, now + 0.25);
+
+                    var gain = c.createGain();
+                    gain.gain.setValueAtTime(0.32, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+
+                    noise.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(c.destination);
+                    noise.start(now);
+
+                    // Low frequency punch
+                    var sub = c.createOscillator();
+                    var subGain = c.createGain();
+                    sub.type = 'square';
+                    sub.frequency.setValueAtTime(130, now);
+                    sub.frequency.exponentialRampToValueAtTime(40, now + 0.20);
+                    subGain.gain.setValueAtTime(0.25, now);
+                    subGain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+                    sub.connect(subGain);
+                    subGain.connect(c.destination);
+                    sub.start(now);
+                    sub.stop(now + 0.20);
+                },
+                // 4. Coin Ding (B5 -> E6)
+                playCoin: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(987.77, now);
+                    osc.frequency.setValueAtTime(1318.51, now + 0.06);
+                    gain.gain.setValueAtTime(0.16, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                },
+                // 5. Power-Up Fanfare (C5 -> E5 -> G5 -> C6)
+                playPowerup: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var notes = [523.25, 659.25, 783.99, 1046.50];
+                    notes.forEach(function(freq, idx) {
+                        var o = c.createOscillator();
+                        var g = c.createGain();
+                        var start = now + idx * 0.05;
+                        o.type = 'triangle';
+                        o.frequency.setValueAtTime(freq, start);
+                        g.gain.setValueAtTime(0.20, start);
+                        g.gain.exponentialRampToValueAtTime(0.001, start + 0.12);
+                        o.connect(g);
+                        g.connect(c.destination);
+                        o.start(start);
+                        o.stop(start + 0.12);
+                    });
+                },
+                // 6. Extra Life Fanfare (Classic 6-tone retro jingle)
+                playExtraLife: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var notes = [392, 523, 659, 784, 659, 1046.5];
+                    notes.forEach(function(freq, idx) {
+                        var o = c.createOscillator();
+                        var g = c.createGain();
+                        var start = now + idx * 0.07;
+                        o.type = 'square';
+                        o.frequency.setValueAtTime(freq, start);
+                        g.gain.setValueAtTime(0.20, start);
+                        g.gain.exponentialRampToValueAtTime(0.001, start + 0.14);
+                        o.connect(g);
+                        g.connect(c.destination);
+                        o.start(start);
+                        o.stop(start + 0.14);
+                    });
+                },
+                // 7. Player Hurt
+                playPlayerHurt: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(240, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.20);
+                    gain.gain.setValueAtTime(0.30, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.20);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.20);
+                },
+                // 8. Warning Siren
+                playWarningSiren: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(460, now);
+                    osc.frequency.linearRampToValueAtTime(840, now + 0.14);
+                    osc.frequency.linearRampToValueAtTime(460, now + 0.28);
+                    gain.gain.setValueAtTime(0.24, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.32);
+                },
+                // 9. Boss Roar
+                playBossRoar: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(120, now);
+                    osc.frequency.linearRampToValueAtTime(240, now + 0.15);
+                    osc.frequency.exponentialRampToValueAtTime(55, now + 0.60);
+                    gain.gain.setValueAtTime(0.35, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.60);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.60);
+                },
+                // 10. Boss Laser Beam
+                playBossLaser: function() {
+                    if (!enabled) return;
+                    var c = getCtx(); if (!c) return;
+                    var now = c.currentTime;
+                    var osc = c.createOscillator();
+                    var gain = c.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.linearRampToValueAtTime(220, now + 0.08);
+                    osc.frequency.exponentialRampToValueAtTime(80, now + 0.24);
+                    gain.gain.setValueAtTime(0.22, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+                    osc.connect(gain);
+                    gain.connect(c.destination);
+                    osc.start(now);
+                    osc.stop(now + 0.24);
+                }
+            };
+        })();
+
+        // Global bridge function callable from C++ WebAssembly
+        window.playSfx = function(name) {
+            if (!RetroAudio) return;
+            switch(name) {
+                case 'laser':       RetroAudio.playLaser(); break;
+                case 'hit':
+                case 'squawk':      RetroAudio.playChickenHit(); break;
+                case 'explosion':   RetroAudio.playExplosion(); break;
+                case 'coin':        RetroAudio.playCoin(); break;
+                case 'powerup':     RetroAudio.playPowerup(); break;
+                case 'extralife':   RetroAudio.playExtraLife(); break;
+                case 'hurt':        RetroAudio.playPlayerHurt(); break;
+                case 'siren':       RetroAudio.playWarningSiren(); break;
+                case 'bossroar':    RetroAudio.playBossRoar(); break;
+                case 'bosslaser':   RetroAudio.playBossLaser(); break;
+            }
+        };
+
+        // Audio toggle UI button
+        var btnAudioToggle = document.getElementById('btnAudioToggle');
+        function updateAudioBtn() {
+            if (!btnAudioToggle) return;
+            var isEn = RetroAudio.isEnabled();
+            btnAudioToggle.textContent = isEn ? '🔊 SFX ON' : '🔇 SFX OFF';
+            btnAudioToggle.classList.toggle('muted', !isEn);
+        }
+        if (btnAudioToggle) {
+            updateAudioBtn();
+            btnAudioToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                RetroAudio.setEnabled(!RetroAudio.isEnabled());
+                updateAudioBtn();
+                if (RetroAudio.isEnabled()) RetroAudio.playCoin();
+                canvasElement.focus();
+            });
+        }
     </script>
     {{{ SCRIPT }}}
 </body>

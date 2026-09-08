@@ -48,7 +48,8 @@ Game::Game()
       enemySpawnTimer(0), enemySpawnRate(120),
       powerupTimer(0), coinTimer(0),
       bgScroll(0), uiMessageTimer(0),
-      notifiedEndGame(false)
+      notifiedEndGame(false),
+      bossWarningActive(false), bossWarningTimer(0)
 {
     srand((unsigned)time(nullptr));
     init();
@@ -85,6 +86,8 @@ void Game::reset(){
     particles.clear();
     delete boss; boss=nullptr;
     bossSpawned=false;
+    bossWarningActive=false;
+    bossWarningTimer=0;
     level=1;
     globalTime=0;
     enemySpawnTimer=0;
@@ -114,6 +117,19 @@ void Game::checkEndGameNotification(){
         }, totalFinalScore, (state == GameState::WIN ? 1 : 0), player.coins, livesBonus, coinBonus, baseCombatScore);
 #endif
     }
+}
+
+// ---------------------------------------------------------------------------
+// playSfx — trigger chiptune audio via Web Audio API bridge
+// ---------------------------------------------------------------------------
+void Game::playSfx(const char* name){
+#ifdef __EMSCRIPTEN__
+    EM_ASM({
+        if (window.playSfx) {
+            window.playSfx(UTF8ToString($0));
+        }
+    }, name);
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -179,14 +195,25 @@ void Game::spawnExplosion(float x, float y, Color c, int count){
 }
 
 // ---------------------------------------------------------------------------
-// Spawn boss
+// Boss Warning and Spawn
 // ---------------------------------------------------------------------------
+void Game::triggerBossWarning(){
+    bossWarningActive = true;
+    bossWarningTimer = 160; // ~2.6 seconds
+    uiMessage = "! WARNING ! BOSS DETECTED";
+    uiMessageTimer = 160;
+    playSfx("siren");
+}
+
 void Game::spawnBoss(){
     delete boss;
     boss = new Boss(WIN_W/2.0f, WIN_H-100.0f, level);
     bossSpawned=true;
+    bossWarningActive=false;
+    bossWarningTimer=0;
     uiMessage = "*** BOSS APPEARS! ***";
     uiMessageTimer=180;
+    playSfx("bossroar");
 }
 
 // ---------------------------------------------------------------------------
@@ -204,6 +231,7 @@ void Game::handleBulletCollisions(){
                 b.active=false;
                 e.takeDamage(b.damage);
                 if(!e.active){
+                    playSfx("explosion");
                     player.score += e.getCoinValue()*2;
                     spawnExplosion(e.x, e.y, Color(1,0.6f,0.1f));
                     // Drop coin
@@ -219,6 +247,8 @@ void Game::handleBulletCollisions(){
                         PowerUpType pt=(PowerUpType)(rand()%3);
                         powerups.emplace_back(e.x, e.y, pt);
                     }
+                } else {
+                    playSfx("hit");
                 }
                 break;
             }
@@ -231,10 +261,13 @@ void Game::handleBulletCollisions(){
             player.score += 5;
             spawnExplosion(b.x, b.y, Color(1,0.2f,0.8f), 8);
             if(!boss->active){
+                playSfx("explosion");
                 player.score += 500;
                 spawnExplosion(boss->x, boss->y, Color(1,0.5f,0), 60);
                 spawnExplosion(boss->x-30, boss->y+20, Color(1,0.8f,0), 40);
                 spawnExplosion(boss->x+30, boss->y-20, Color(0.8f,0.2f,1), 40);
+            } else {
+                playSfx("hit");
             }
         }
     }
@@ -251,6 +284,7 @@ void Game::handleEggCollisions(){
         if(eg.getAABB().intersects(pa)){
             eg.active=false;
             player.takeDamage(10);
+            playSfx("hurt");
             spawnExplosion(eg.x, eg.y, Color(0.9f,0.9f,0.6f), 10);
         }
     };
@@ -279,6 +313,7 @@ void Game::handlePickups(){
             c.active=false;
             player.coins += c.value;
             player.score += c.value;
+            playSfx("coin");
             spawnExplosion(c.x,c.y,Color(1,0.9f,0.1f),6);
         }
     }
@@ -292,6 +327,7 @@ void Game::handlePickups(){
             spawnExplosion(f.x,f.y,Color(0.3f,1.0f,0.4f),14);
             if(player.foodCollected >= Player::foodForLife){
                 player.foodCollected = 0;
+                playSfx("extralife");
                 if(player.lives < player.maxLives){
                     player.lives++;
                     player.score += 200;
@@ -308,6 +344,7 @@ void Game::handlePickups(){
                     spawnExplosion(player.x, player.y, Color(1,0.9f,0.1f),20);
                 }
             } else {
+                playSfx("coin");
                 int rem = Player::foodForLife - player.foodCollected;
                 uiMessage="Food! +30 PTS ("+std::to_string(rem)+" more for LIFE)";
                 uiMessageTimer=100;
@@ -320,6 +357,7 @@ void Game::handlePickups(){
         if(p.getAABB().intersects(pa)){
             p.active=false;
             player.score += 50;
+            playSfx("powerup");
             switch(p.type){
                 case PowerUpType::FIRE_RATE:
                     player.activateFireRate();
@@ -358,6 +396,9 @@ void Game::update(){
 
     // Player
     player.update();
+    if(player.shotFired){
+        playSfx("laser");
+    }
 
     // Enemies
     for(auto& e : enemies) e.update();
@@ -366,8 +407,13 @@ void Game::update(){
     ), enemies.end());
 
     // Boss
-    if(bossSpawned && boss && boss->active)
+    if(bossSpawned && boss && boss->active){
         boss->update(player.x, player.y);
+        if(boss->laserJustFired){
+            playSfx("bosslaser");
+            boss->laserJustFired = false;
+        }
+    }
 
     // Pickups
     for(auto& c : coins)    c.update();
@@ -400,11 +446,20 @@ void Game::update(){
     // UI message timeout
     if(uiMessageTimer>0) uiMessageTimer--;
 
-    // Enemy spawn (if wave cleared before boss)
-    if(enemies.empty() && !bossSpawned){
-        if(++enemySpawnTimer >= 180){
-            enemySpawnTimer=0;
+    // Boss Warning Sequence & Spawn (when wave enemies are cleared)
+    if(enemies.empty() && !bossSpawned && !bossWarningActive){
+        triggerBossWarning();
+    }
+
+    if(bossWarningActive){
+        if(--bossWarningTimer <= 0){
+            bossWarningActive = false;
             spawnBoss();
+        } else {
+            // Pulse siren sound every 36 frames
+            if(bossWarningTimer % 36 == 0){
+                playSfx("siren");
+            }
         }
     }
 
@@ -429,6 +484,7 @@ void Game::update(){
 
     // Player dead — lose a life or end the game
     if(player.hp <= 0 && player.respawnTimer <= 0){
+        playSfx("hurt");
         if(player.lives > 0){
             player.lives--;
             player.hp = player.maxHp;
@@ -454,10 +510,12 @@ void Game::update(){
 void Game::nextLevel(){
     level++;
     delete boss; boss=nullptr; bossSpawned=false;
+    bossWarningActive=false; bossWarningTimer=0;
     enemies.clear(); coins.clear(); foods.clear(); powerups.clear();
     enemySpawnRate = std::max(60, 120 - level*15);
     uiMessage = "LEVEL " + std::to_string(level) + " !";
     uiMessageTimer = 180;
+    playSfx("powerup");
     spawnWave();
 }
 
@@ -506,12 +564,13 @@ void Game::onKeyPress(unsigned char key){
             if(key=='\r' || key==13){
                 state=GameState::PLAYING;
                 reset();
+                playSfx("powerup");
                 spawnWave();
             }
             break;
         case GameState::PLAYING:
             if(key=='p' || key=='P') state=GameState::PAUSED;
-            if(key=='b' || key=='B'){ enemies.clear(); spawnBoss(); }
+            if(key=='b' || key=='B'){ enemies.clear(); triggerBossWarning(); }
             break;
         case GameState::PAUSED:
             if(key=='p' || key=='P') state=GameState::PLAYING;
@@ -1011,6 +1070,67 @@ void Game::drawWinScreen(){
 }
 
 // ---------------------------------------------------------------------------
+// drawBossWarning — Retro Arcade Hazard Warning Overlay
+// ---------------------------------------------------------------------------
+void Game::drawBossWarning(){
+    if(!bossWarningActive) return;
+
+    float t = globalTime;
+    // Ambient red CRT strobe flash
+    float strobe = 0.08f + 0.07f * std::sin(t * 14.0f);
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    drawRect(0, 0, WIN_W, WIN_H, Color(0.85f, 0.05f, 0.05f, strobe));
+
+    // Top & bottom animated hazard stripe bars
+    auto drawHazardBar = [&](float yBase, float barH) {
+        drawRect(0, yBase, WIN_W, barH, Color(0.08f, 0.08f, 0.08f, 0.95f));
+        float stripeW = 28.0f;
+        float offset = std::fmod(t * 65.0f, stripeW * 2.0f);
+        for(float x = -stripeW * 2.0f + offset; x < WIN_W + stripeW * 2.0f; x += stripeW * 2.0f){
+            glColor4f(1.0f, 0.78f, 0.0f, 0.92f);
+            glBegin(GL_QUADS);
+            glVertex2f(x, yBase);
+            glVertex2f(x + stripeW * 0.85f, yBase);
+            glVertex2f(x + stripeW * 0.85f + 18.0f, yBase + barH);
+            glVertex2f(x + 18.0f, yBase + barH);
+            glEnd();
+        }
+        drawRectOutline(0, yBase, WIN_W, barH, Color(1.0f, 0.2f, 0.2f, 0.90f), 2.0f);
+    };
+
+    drawHazardBar(WIN_H - 34, 34);
+    drawHazardBar(0, 34);
+
+    // Center warning alert box
+    float bw = 380, bh = 110;
+    float bx = WIN_W/2.0f - bw/2.0f, by = WIN_H/2.0f - bh/2.0f + 20;
+
+    float boxPulse = 0.85f + 0.15f * std::abs(std::sin(t * 8.0f));
+    drawRect(bx, by, bw, bh, Color(0.05f, 0.0f, 0.02f, 0.94f));
+    drawRectOutline(bx, by, bw, bh, Color(1.0f, 0.15f, 0.15f, boxPulse), 3.0f);
+    drawRectOutline(bx+4, by+4, bw-8, bh-8, Color(1.0f, 0.65f, 0.0f, 0.75f), 1.5f);
+
+    float flashAlpha = 0.45f + 0.55f * std::abs(std::sin(t * 10.0f));
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextOutlined(WIN_W/2 - 134, by + bh - 32, "! WARNING !",
+        Color(1.0f, 0.18f, 0.18f, flashAlpha), 2.6f,
+        Color(0.25f, 0.0f, 0.0f, 0.95f));
+
+    renderArcadeTextGlow(WIN_W/2 - 160, by + bh - 64, "MOTHERSHIP ROOSTER DETECTED",
+        Color(1.0f, 0.85f, 0.20f), 1.55f,
+        Color(1.0f, 0.2f, 0.0f), 0.35f);
+
+    renderArcadeText(WIN_W/2 - 110, by + 16, "PREPARE FOR BATTLE",
+        Color(0.85f, 0.85f, 0.90f, boxPulse), 1.35f);
+#else
+    drawTextLarge(WIN_W/2 - 90, by + bh - 35, "! WARNING !", Color(1.0f, 0.1f, 0.1f));
+    drawText(WIN_W/2 - 140, by + bh - 65, "MOTHERSHIP ROOSTER DETECTED", Color(1.0f, 0.85f, 0.2f));
+    drawText(WIN_W/2 - 90, by + 18, "PREPARE FOR BATTLE", Color(0.8f, 0.8f, 0.85f));
+#endif
+    glDisable(GL_BLEND);
+}
+
+// ---------------------------------------------------------------------------
 // display — CG Concept 13: Double Buffering
 // The scene is drawn into the BACK buffer.  glutSwapBuffers() atomically
 // swaps it to the front, preventing screen tearing.
@@ -1058,6 +1178,8 @@ void Game::display(){
             glDisable(GL_BLEND);
 
             drawHUD();
+
+            if(bossWarningActive) drawBossWarning();
 
             if(state==GameState::PAUSED) drawPauseScreen();
             break;
