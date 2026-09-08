@@ -508,6 +508,44 @@
             text-shadow: 0 0 12px rgba(255, 160, 30, 0.4);
         }
 
+        .score-breakdown-panel {
+            margin: -6px 0 16px;
+            background: #080c14;
+            border: 1px dashed #243447;
+            border-radius: 4px;
+            padding: 8px 14px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .breakdown-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 3px;
+        }
+        .breakdown-lbl {
+            font-family: var(--font-pixel);
+            font-size: 0.40rem;
+            color: #64748b;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+        }
+        .breakdown-val {
+            font-family: var(--font-pixel);
+            font-size: 0.65rem;
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+        .breakdown-val.bonus-green {
+            color: var(--retro-green);
+            text-shadow: 0 0 8px rgba(0, 255, 102, 0.35);
+        }
+        .breakdown-val.bonus-gold {
+            color: var(--retro-amber);
+            text-shadow: 0 0 8px rgba(255, 160, 30, 0.35);
+        }
+
         /* ── Input fields ── */
         .input-group {
             margin: 14px 0 16px;
@@ -1092,6 +1130,21 @@
                 </div>
             </div>
 
+            <div class="score-breakdown-panel" id="scoreBreakdownPanel">
+                <div class="breakdown-item">
+                    <span class="breakdown-lbl">Combat</span>
+                    <span class="breakdown-val" id="bdCombatVal">0</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-lbl">Lives Bonus</span>
+                    <span class="breakdown-val bonus-green" id="bdLivesVal">+0</span>
+                </div>
+                <div class="breakdown-item">
+                    <span class="breakdown-lbl">Coin Vault</span>
+                    <span class="breakdown-val bonus-gold" id="bdCoinsVal">+0</span>
+                </div>
+            </div>
+
             <div class="input-row-grid">
                 <div class="input-group" style="margin:0;">
                     <label for="playerNameInput">Pilot Name:</label>
@@ -1495,12 +1548,20 @@
         var worldSavedSplash = document.getElementById('worldSavedSplash');
         var wsFinalScore = document.getElementById('wsFinalScore');
 
-        window.onGameFinished = function(finalScore, isWin, coins) {
+        window.onGameFinished = function(finalScore, isWin, coins, livesBonus, coinBonus, baseScore) {
             currentEndScore = finalScore;
             currentEndCoins = coins || 0;
 
             modalScoreVal.textContent = currentEndScore.toLocaleString();
             modalCoinsVal.textContent = currentEndCoins.toLocaleString();
+
+            var bdCombat = document.getElementById('bdCombatVal');
+            var bdLives = document.getElementById('bdLivesVal');
+            var bdCoins = document.getElementById('bdCoinsVal');
+            if (bdCombat) bdCombat.textContent = (baseScore !== undefined ? baseScore : finalScore).toLocaleString();
+            if (bdLives) bdLives.textContent = '+' + (livesBonus || 0).toLocaleString();
+            if (bdCoins) bdCoins.textContent = '+' + (coinBonus || 0).toLocaleString();
+
             submitMsg.textContent = '';
             submitMsg.className = 'msg-box';
             btnSubmitScore.disabled = false;
