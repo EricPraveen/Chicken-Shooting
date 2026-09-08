@@ -10,7 +10,7 @@
 static const uint8_t FONT_DATA[95][8] = {
     /*  32 ' ' */ { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     /*  33 '!' */ { 0x10, 0x10, 0x10, 0x10, 0x10, 0x00, 0x00, 0x10 },
-    /*  34 '\"' */ { 0x18, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00 },
+    /*  34 '"' */ { 0x18, 0x18, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00 },
     /*  35 '#' */ { 0x0A, 0x0C, 0x0C, 0x1E, 0x14, 0x1E, 0x14, 0x18 },
     /*  36 '$' */ { 0x0E, 0x15, 0x15, 0x1C, 0x06, 0x05, 0x15, 0x0E },
     /*  37 '%' */ { 0x1C, 0x15, 0x15, 0x1E, 0x03, 0x05, 0x09, 0x09 },
@@ -43,21 +43,21 @@ static const uint8_t FONT_DATA[95][8] = {
     /*  64 '@' */ { 0x03, 0x0C, 0x0B, 0x14, 0x14, 0x15, 0x16, 0x08 },
     /*  65 'A' */ { 0x04, 0x0C, 0x0A, 0x12, 0x1E, 0x11, 0x11, 0x21 },
     /*  66 'B' */ { 0x1E, 0x11, 0x11, 0x12, 0x1F, 0x11, 0x11, 0x1E },
-    /*  67 'C' */ { 0x07, 0x08, 0x10, 0x10, 0x10, 0x10, 0x08, 0x0F },
-    /*  68 'D' */ { 0x1E, 0x11, 0x10, 0x10, 0x10, 0x10, 0x11, 0x1E },
+    /*  67 'C' */ { 0x0E, 0x11, 0x10, 0x10, 0x10, 0x10, 0x11, 0x0E },
+    /*  68 'D' */ { 0x1E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1E },
     /*  69 'E' */ { 0x1F, 0x10, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x1F },
     /*  70 'F' */ { 0x1F, 0x10, 0x10, 0x10, 0x1E, 0x10, 0x10, 0x10 },
-    /*  71 'G' */ { 0x07, 0x09, 0x10, 0x10, 0x13, 0x10, 0x09, 0x0E },
-    /*  72 'H' */ { 0x10, 0x10, 0x10, 0x10, 0x1F, 0x10, 0x10, 0x10 },
-    /*  73 'I' */ { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10 },
+    /*  71 'G' */ { 0x0E, 0x11, 0x10, 0x10, 0x13, 0x11, 0x11, 0x0E },
+    /*  72 'H' */ { 0x11, 0x11, 0x11, 0x11, 0x1F, 0x11, 0x11, 0x11 },
+    /*  73 'I' */ { 0x0E, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0E },
     /*  74 'J' */ { 0x02, 0x02, 0x02, 0x02, 0x02, 0x12, 0x12, 0x0C },
-    /*  75 'K' */ { 0x11, 0x12, 0x14, 0x14, 0x1C, 0x14, 0x12, 0x11 },
+    /*  75 'K' */ { 0x11, 0x12, 0x14, 0x18, 0x18, 0x14, 0x12, 0x11 },
     /*  76 'L' */ { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1F },
-    /*  77 'M' */ { 0x18, 0x18, 0x18, 0x15, 0x15, 0x15, 0x16, 0x12 },
-    /*  78 'N' */ { 0x19, 0x19, 0x19, 0x15, 0x15, 0x15, 0x13, 0x13 },
-    /*  79 'O' */ { 0x07, 0x08, 0x10, 0x10, 0x10, 0x10, 0x08, 0x07 },
+    /*  77 'M' */ { 0x11, 0x1B, 0x15, 0x15, 0x11, 0x11, 0x11, 0x11 },
+    /*  78 'N' */ { 0x11, 0x19, 0x19, 0x15, 0x13, 0x13, 0x11, 0x11 },
+    /*  79 'O' */ { 0x0E, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0E },
     /*  80 'P' */ { 0x1E, 0x11, 0x11, 0x11, 0x1E, 0x10, 0x10, 0x10 },
-    /*  81 'Q' */ { 0x07, 0x08, 0x10, 0x10, 0x10, 0x10, 0x08, 0x07 },
+    /*  81 'Q' */ { 0x0E, 0x11, 0x11, 0x11, 0x11, 0x15, 0x0E, 0x05 },
     /*  82 'R' */ { 0x1E, 0x11, 0x11, 0x11, 0x1E, 0x13, 0x11, 0x11 },
     /*  83 'S' */ { 0x0E, 0x11, 0x10, 0x08, 0x07, 0x01, 0x11, 0x0E },
     /*  84 'T' */ { 0x1F, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04 },
@@ -67,9 +67,9 @@ static const uint8_t FONT_DATA[95][8] = {
     /*  88 'X' */ { 0x11, 0x12, 0x0A, 0x0C, 0x0C, 0x0A, 0x12, 0x11 },
     /*  89 'Y' */ { 0x11, 0x11, 0x0A, 0x0A, 0x04, 0x04, 0x04, 0x04 },
     /*  90 'Z' */ { 0x1F, 0x01, 0x02, 0x04, 0x04, 0x08, 0x10, 0x1F },
-    /*  91 '[' */ { 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10 },
+    /*  91 '[' */ { 0x1C, 0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1C },
     /*  92 '\\' */ { 0x00, 0x00, 0x00, 0x20, 0x20, 0x20, 0x20, 0x10 },
-    /*  93 ']' */ { 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x20 },
+    /*  93 ']' */ { 0x1C, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04, 0x1C },
     /*  94 '^' */ { 0x00, 0x00, 0x0C, 0x14, 0x14, 0x12, 0x00, 0x00 },
     /*  95 '_' */ { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
     /*  96 '`' */ { 0x00, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 },
@@ -105,6 +105,10 @@ static const uint8_t FONT_DATA[95][8] = {
     /* 126 '~' */ { 0x00, 0x00, 0x00, 0x00, 0x1A, 0x16, 0x00, 0x00 },
 };
 
+// =============================================================================
+// renderArcadeText — original function, unchanged signature
+// Renders bitmap text using GL_QUADS. Scale 2.0 = normal, 2.6 = large.
+// =============================================================================
 inline void renderArcadeText(float x, float y, const std::string& str, Color color, float scale = 2.0f) {
     color.apply();
     glBegin(GL_QUADS);
@@ -134,4 +138,81 @@ inline void renderArcadeText(float x, float y, const std::string& str, Color col
         curX += 7.0f * scale;
     }
     glEnd();
+}
+
+// =============================================================================
+// renderArcadeTextWithShadow — retro drop-shadow variant
+// Renders a dark shadow pass offset by (shadowOff, -shadowOff), then the
+// main color on top. Creates classic arcade drop-shadow depth.
+// Existing renderArcadeText is unchanged; this is purely additive.
+// =============================================================================
+inline void renderArcadeTextWithShadow(float x, float y, const std::string& str,
+                                        Color color, float scale = 2.0f,
+                                        float shadowOff = 1.5f,
+                                        Color shadowColor = Color(0.0f, 0.0f, 0.0f, 0.75f))
+{
+    // Shadow pass
+    renderArcadeText(x + shadowOff, y - shadowOff, str, shadowColor, scale);
+    // Main color pass
+    renderArcadeText(x, y, str, color, scale);
+}
+
+// =============================================================================
+// renderArcadeTextOutlined — thick outlined text for large titles
+// Renders 8 directional shadow passes (N,NE,E,SE,S,SW,W,NW) at 1px offset
+// to create a solid outline, then renders the main color on top.
+// Ideal for: "CHICKEN INVADERS", "GAME OVER", "YOU WIN!" etc.
+// =============================================================================
+inline void renderArcadeTextOutlined(float x, float y, const std::string& str,
+                                      Color color, float scale = 2.0f,
+                                      Color outlineColor = Color(0.0f, 0.0f, 0.0f, 0.9f))
+{
+    float d = scale * 0.75f; // outline thickness scales with text
+    // 8-directional outline passes
+    renderArcadeText(x - d, y,      str, outlineColor, scale);
+    renderArcadeText(x + d, y,      str, outlineColor, scale);
+    renderArcadeText(x,     y - d,  str, outlineColor, scale);
+    renderArcadeText(x,     y + d,  str, outlineColor, scale);
+    renderArcadeText(x - d, y - d,  str, outlineColor, scale);
+    renderArcadeText(x + d, y - d,  str, outlineColor, scale);
+    renderArcadeText(x - d, y + d,  str, outlineColor, scale);
+    renderArcadeText(x + d, y + d,  str, outlineColor, scale);
+    // Main color on top
+    renderArcadeText(x, y, str, color, scale);
+}
+
+// =============================================================================
+// renderArcadeTextGlow — glowing text for HUD highlights and critical messages
+// Renders 2 semi-transparent, slightly scaled-up glow passes in glowColor
+// behind the main text to create a colored halo effect.
+// Ideal for: score display, power-up messages, boss warning text.
+// =============================================================================
+inline void renderArcadeTextGlow(float x, float y, const std::string& str,
+                                  Color color, float scale = 2.0f,
+                                  Color glowColor = Color(1.0f, 0.8f, 0.0f, 0.25f),
+                                  float glowAlpha = 0.25f)
+{
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Wide soft glow (offset 2 in 4 directions)
+    Color gOuter = glowColor; gOuter.a = glowAlpha * 0.5f;
+    float d2 = scale * 1.2f;
+    renderArcadeText(x - d2, y,      str, gOuter, scale);
+    renderArcadeText(x + d2, y,      str, gOuter, scale);
+    renderArcadeText(x,      y - d2, str, gOuter, scale);
+    renderArcadeText(x,      y + d2, str, gOuter, scale);
+
+    // Tight inner glow
+    Color gInner = glowColor; gInner.a = glowAlpha;
+    float d1 = scale * 0.5f;
+    renderArcadeText(x - d1, y,      str, gInner, scale);
+    renderArcadeText(x + d1, y,      str, gInner, scale);
+    renderArcadeText(x,      y - d1, str, gInner, scale);
+    renderArcadeText(x,      y + d1, str, gInner, scale);
+
+    glDisable(GL_BLEND);
+
+    // Crisp main text on top
+    renderArcadeText(x, y, str, color, scale);
 }

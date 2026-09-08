@@ -27,9 +27,8 @@ extern "C" {
     EMSCRIPTEN_KEEPALIVE
     void wasm_restart_game() {
         if (g_game) {
-            g_game->state = GameState::PLAYING;
+            g_game->state = GameState::MENU;
             g_game->reset();
-            g_game->spawnWave();
         }
     }
 
@@ -124,6 +123,13 @@ void Game::spawnWave(){
     float spacingX = (WIN_W - 160.0f) / (cols-1);
     float spacingY = 60.0f;
 
+    // Progressive entry pattern per level:
+    // Level 1: Orderly Staggered Top-Down Descent (Row by row with V-wave)
+    // Level 2: Dual-Wing Cross Swoop (Left & Right flanking crossing arcs)
+    // Level 3: Spiral S-Curve Swarm (Continuous serpent wave)
+    int pattern = std::min(level, 3);
+    if(pattern < 1) pattern = 1;
+
     for(int r=0;r<rows;r++){
         for(int c=0;c<cols;c++){
             EnemyType t;
@@ -135,7 +141,9 @@ void Game::spawnWave(){
             float ex = startX + c*spacingX;
             float ey = startY - r*spacingY;
             if(ey > WIN_H-40) ey=WIN_H-40;
+
             enemies.emplace_back(ex, ey, t);
+            enemies.back().setupEntry(pattern, r, c, rows, cols, ex, ey);
         }
     }
 }
@@ -152,6 +160,17 @@ void Game::spawnExplosion(float x, float y, Color c, int count){
         particles.emplace_back(x,y,
             speed*std::cos(angle), speed*std::sin(angle),
             life, c, sz);
+    }
+    // Avian feather particle bursts
+    int featherCount = count / 3 + 2;
+    for(int i=0;i<featherCount;i++){
+        float angle = randF(0, 2*PI);
+        float speed = randF(0.8f, 3.0f);
+        float life  = randF(35, 65);
+        float sz    = randF(3, 6);
+        particles.emplace_back(x,y,
+            speed*std::cos(angle), speed*std::sin(angle) + 0.8f,
+            life, Color(0.96f, 0.94f, 0.88f), sz);
     }
 }
 
@@ -445,6 +464,7 @@ void Game::onKeyDown(unsigned char key){
         case 'd': case 'D': player.moveRight =true; break;
         case 'w': case 'W': player.moveUp    =true; break;
         case 's': case 'S': player.moveDown  =true; break;
+        case ' ':           player.isShooting =true; break;
     }
 }
 void Game::onKeyUp(unsigned char key){
@@ -453,6 +473,7 @@ void Game::onKeyUp(unsigned char key){
         case 'd': case 'D': player.moveRight =false; break;
         case 'w': case 'W': player.moveUp    =false; break;
         case 's': case 'S': player.moveDown  =false; break;
+        case ' ':           player.isShooting =false; break;
     }
 }
 void Game::onSpecialDown(int key){
@@ -475,7 +496,7 @@ void Game::onSpecialUp(int key){
 void Game::onKeyPress(unsigned char key){
     switch(state){
         case GameState::MENU:
-            if(key==' ' || key=='\r' || key==13){
+            if(key=='\r' || key==13){
                 state=GameState::PLAYING;
                 reset();
                 spawnWave();
@@ -483,6 +504,7 @@ void Game::onKeyPress(unsigned char key){
             break;
         case GameState::PLAYING:
             if(key=='p' || key=='P') state=GameState::PAUSED;
+            if(key=='b' || key=='B'){ enemies.clear(); spawnBoss(); }
             break;
         case GameState::PAUSED:
             if(key=='p' || key=='P') state=GameState::PLAYING;
@@ -490,7 +512,7 @@ void Game::onKeyPress(unsigned char key){
             break;
         case GameState::GAME_OVER:
         case GameState::WIN:
-            if(key==' ' || key=='\r' || key==13){ state=GameState::MENU; reset(); }
+            if(key=='\r' || key==13){ state=GameState::MENU; reset(); }
             break;
     }
 }
@@ -500,11 +522,11 @@ void Game::onKeyPress(unsigned char key){
 // ---------------------------------------------------------------------------
 #ifdef __EMSCRIPTEN__
 void Game::drawText(float x, float y, const std::string& s, Color c, void* /*font*/){
-    renderArcadeText(x, y, s, c, 1.6f);
+    renderArcadeTextWithShadow(x, y, s, c, 1.6f, 1.2f);
 }
 
 void Game::drawTextLarge(float x, float y, const std::string& s, Color c){
-    renderArcadeText(x, y, s, c, 2.6f);
+    renderArcadeTextWithShadow(x, y, s, c, 2.6f, 2.0f);
 }
 #else
 void Game::drawText(float x, float y, const std::string& s, Color c, void* font){
@@ -567,34 +589,62 @@ void Game::drawBackground(){
 }
 
 // ---------------------------------------------------------------------------
-// drawHUD
+// drawHUD — Retro Arcade HUD
 // ---------------------------------------------------------------------------
 void Game::drawHUD(){
-    // HP bar
+    float t = globalTime;
+
+    // ── Thin HUD separator line ───────────────────────────────────────────────
+    ddaLine(0, WIN_H-35, WIN_W, WIN_H-35, Color(0.35f,0.30f,0.55f,0.45f));
+
+    // ── HP bar — retro LCD style ──────────────────────────────────────────────
     float hpFrac=(float)player.hp/player.maxHp;
-    drawRect(10,10,200,16, Color(0.2f,0.2f,0.2f));
-    Color hpCol=(hpFrac>0.5f)?Color(0.1f,0.9f,0.2f):(hpFrac>0.25f)?Color(1,0.7f,0):Color(0.9f,0.1f,0.1f);
-    drawRect(10,10,200*hpFrac,16,hpCol);
-    drawRectOutline(10,10,200,16,Color(0.7f,0.7f,0.7f));
+    // Bar track
+    drawRect(10,10,202,17, Color(0.08f,0.08f,0.10f));
+    drawRectOutline(10,10,202,17, Color(0.38f,0.32f,0.55f),1.5f);
+    // Filled portion
+    Color hpCol=(hpFrac>0.5f)?Color(0.12f,0.88f,0.22f):(hpFrac>0.25f)?Color(1.0f,0.72f,0.0f):Color(0.92f,0.10f,0.10f);
+    drawRect(11,11,200*hpFrac,15,hpCol);
+    // Scanline overlay on bar — every 3 pixels a semi-transparent dark stripe
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    for(int scanY=11; scanY<26; scanY+=3){
+        drawRect(11,scanY,200*hpFrac,1, Color(0,0,0,0.18f));
+    }
+    glDisable(GL_BLEND);
+    // HP label
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(14, 14, "HP "+std::to_string(player.hp), Color(0.9f,0.9f,1.0f), 1.4f);
+#else
     drawText(12,13,"HP: "+std::to_string(player.hp)+"/"+std::to_string(player.maxHp),
         Color(1,1,1), GLUT_BITMAP_HELVETICA_12);
+#endif
 
-    // Score
+    // ── Score — arcade cyan with shadow ──────────────────────────────────────
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextWithShadow(10, 40, "SCORE "+std::to_string(player.score),
+        Color(0.0f,0.95f,0.85f), 1.7f, 1.5f, Color(0,0,0,0.7f));
+    // Coins — retro amber
+    renderArcadeTextWithShadow(10, 65, "COINS "+std::to_string(player.coins),
+        Color(1.0f,0.70f,0.20f), 1.5f, 1.2f);
+    // Level — outlined for emphasis
+    renderArcadeTextOutlined(10, 90, "LVL "+std::to_string(level),
+        Color(0.4f,0.92f,1.0f), 1.7f, Color(0.0f,0.25f,0.35f,0.85f));
+#else
     drawText(10,40,"SCORE: "+std::to_string(player.score), Color(1,1,0.3f));
-
-    // Coins
     drawText(10,65,"COINS: "+std::to_string(player.coins), Color(1,0.85f,0));
-
-    // Level
     drawText(10,90,"LEVEL: "+std::to_string(level), Color(0.5f,0.9f,1.0f));
+#endif
 
-    // ── LIVES display (mini ship icons) ─────────────────────────────────────
+    // ── LIVES display (mini ship icons) ──────────────────────────────────────
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(10, 118, "LIVES", Color(1.0f,0.42f,0.42f), 1.4f);
+#else
     drawText(10, 118, "LIVES:", Color(1.0f,0.55f,0.55f), GLUT_BITMAP_HELVETICA_12);
+#endif
     for(int i=0;i<player.maxLives;i++){
         float lx = 62.0f + i*30.0f;
         float lcy = 118.0f;
         if(i < player.lives){
-            // Active life — filled blue ship silhouette
             std::vector<Vec2> shipMini={
                 {lx,      lcy+13},
                 {lx-9,    lcy-4},
@@ -604,8 +654,11 @@ void Game::drawHUD(){
             };
             scanlineFill(shipMini, Color(0.3f,0.6f,1.0f));
             drawCircle(lx, lcy+4, 4, Color(0.6f,0.9f,1.0f,0.85f));
+            // Small glow under active life
+            glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            drawCircle(lx, lcy, 8, Color(0.3f,0.5f,1.0f,0.12f));
+            glDisable(GL_BLEND);
         } else {
-            // Lost life — dark ghost ship
             std::vector<Vec2> shipMini={
                 {lx,      lcy+13},
                 {lx-9,    lcy-4},
@@ -613,134 +666,339 @@ void Game::drawHUD(){
                 {lx+6,    lcy-10},
                 {lx+9,    lcy-4}
             };
-            scanlineFill(shipMini, Color(0.2f,0.2f,0.25f));
+            scanlineFill(shipMini, Color(0.18f,0.18f,0.22f));
         }
     }
 
-    // ── FOOD progress bar toward next life ──────────────────────────────────
+    // ── FOOD progress bar toward next life ───────────────────────────────────
     float foodPct = (float)player.foodCollected / (float)Player::foodForLife;
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(10, 148, "FOOD", Color(0.30f,0.88f,0.30f), 1.4f);
+#else
     drawText(10, 148, "FOOD:", Color(0.4f,0.9f,0.4f), GLUT_BITMAP_HELVETICA_12);
-    drawRect(52, 145, 96, 11, Color(0.1f,0.18f,0.1f));
-    drawRect(52, 145, 96*foodPct, 11, Color(0.25f+0.2f*foodPct, 0.85f, 0.25f));
-    drawRectOutline(52, 145, 96, 11, Color(0.4f,0.65f,0.4f));
+#endif
+    drawRect(52, 145, 96, 11, Color(0.06f,0.14f,0.06f));
+    drawRect(52, 145, 96*foodPct, 11, Color(0.20f+0.25f*foodPct, 0.85f, 0.20f));
+    // Scanline on food bar
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    for(int scanY=145; scanY<156; scanY+=3)
+        drawRect(52,scanY,96*foodPct,1, Color(0,0,0,0.18f));
+    glDisable(GL_BLEND);
+    drawRectOutline(52, 145, 96, 11, Color(0.30f,0.55f,0.30f),1.2f);
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(153, 148,
+        std::to_string(player.foodCollected)+"/"+std::to_string(Player::foodForLife),
+        Color(0.6f,1.0f,0.6f), 1.3f);
+#else
     drawText(153, 148,
         std::to_string(player.foodCollected)+"/"+std::to_string(Player::foodForLife)+" for LIFE",
         Color(0.7f,1.0f,0.7f), GLUT_BITMAP_HELVETICA_12);
+#endif
 
-    // Respawn invincibility indicator
+    // ── Respawn invincibility — animated blink ────────────────────────────────
     if(player.respawnTimer > 0){
-        float blinkAlpha = 0.6f + 0.4f*std::sin(player.respawnTimer*0.3f);
-        float tw2 = 130.0f;
-        drawRect(WIN_W/2-tw2/2, WIN_H-55, tw2, 18, Color(0,0,0,0.5f*blinkAlpha));
+        float blinkAlpha = 0.55f + 0.45f*std::abs(std::sin(t*8.0f));
+#ifdef __EMSCRIPTEN__
+        float tw2 = 160.0f;
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        drawRect(WIN_W/2-tw2/2-4, WIN_H-58, tw2+8, 24, Color(0,0.1f,0.15f,0.6f*blinkAlpha));
+        drawRectOutline(WIN_W/2-tw2/2-4, WIN_H-58, tw2+8, 24, Color(0.3f,0.8f,1.0f,0.7f*blinkAlpha),1.5f);
+        glDisable(GL_BLEND);
+        renderArcadeTextGlow(WIN_W/2-74, WIN_H-53, "INVINCIBLE!",
+            Color(0.4f,0.95f,1.0f,blinkAlpha), 1.6f,
+            Color(0.2f,0.8f,1.0f,blinkAlpha), 0.3f*blinkAlpha);
+#else
         drawText(WIN_W/2-50, WIN_H-52, "INVINCIBLE!", Color(0.4f,0.9f,1.0f,blinkAlpha),
                  GLUT_BITMAP_HELVETICA_12);
+#endif
     }
 
-    // Power-up indicators (top-right)
-    float px=WIN_W-180;
+    // ── Power-up indicators (top-right) — with blinking border ───────────────
+    float px=WIN_W-200;
+    float borderPulse = 0.5f + 0.5f*std::abs(std::sin(t*5.0f));
     if(player.shieldActive){
-        drawRect(px,WIN_H-30,80,22, Color(0.1f,0.3f,0.6f,0.7f));
+        drawRect(px,WIN_H-32,88,24, Color(0.06f,0.18f,0.45f,0.80f));
+        drawRectOutline(px,WIN_H-32,88,24, Color(0.35f,0.70f,1.0f,borderPulse),1.8f);
+#ifdef __EMSCRIPTEN__
+        renderArcadeText(px+5,WIN_H-27,"SHIELD", Color(0.40f,0.85f,1.0f), 1.5f);
+#else
         drawText(px+4,WIN_H-26,"SHIELD", Color(0.4f,0.8f,1.0f));
-        px+=90;
+#endif
+        px+=98;
     }
     if(player.strongBulletActive){
-        drawRect(px,WIN_H-30,100,22, Color(0.5f,0.1f,0.0f,0.7f));
+        drawRect(px,WIN_H-32,88,24, Color(0.35f,0.08f,0.0f,0.80f));
+        drawRectOutline(px,WIN_H-32,88,24, Color(1.0f,0.42f,0.10f,borderPulse),1.8f);
+#ifdef __EMSCRIPTEN__
+        renderArcadeText(px+5,WIN_H-27,"STRONG", Color(1.0f,0.45f,0.10f), 1.5f);
+#else
         drawText(px+4,WIN_H-26,"STRONG", Color(1,0.4f,0.1f));
-        px+=110;
+#endif
+        px+=98;
     }
     if(player.fireRateActive){
-        drawRect(px,WIN_H-30,100,22, Color(0.4f,0.4f,0.0f,0.7f));
+        drawRect(px,WIN_H-32,104,24, Color(0.28f,0.28f,0.0f,0.80f));
+        drawRectOutline(px,WIN_H-32,104,24, Color(1.0f,1.0f,0.15f,borderPulse),1.8f);
+#ifdef __EMSCRIPTEN__
+        renderArcadeText(px+5,WIN_H-27,"RAPID", Color(1.0f,1.0f,0.15f), 1.5f);
+#else
         drawText(px+4,WIN_H-26,"FAST FIRE", Color(1,1,0.2f));
+#endif
     }
 
-    // UI message (center)
+    // ── UI message (center) — glowing dramatic text ───────────────────────────
     if(uiMessageTimer>0){
         float alpha=(float)uiMessageTimer/120.0f;
         if(alpha>1) alpha=1;
+#ifdef __EMSCRIPTEN__
+        float charW = 1.9f * 7.0f;
+        float tw = uiMessage.size() * charW;
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        drawRect(WIN_W/2-tw/2-10, WIN_H/2-12, tw+20, 28, Color(0.02f,0.02f,0.05f,0.72f*alpha));
+        drawRectOutline(WIN_W/2-tw/2-10, WIN_H/2-12, tw+20, 28, Color(1.0f,0.88f,0.0f,0.55f*alpha),1.5f);
+        glDisable(GL_BLEND);
+        renderArcadeTextGlow(WIN_W/2-tw/2, WIN_H/2-8, uiMessage,
+            Color(1.0f,0.95f,0.20f,alpha), 1.9f,
+            Color(1.0f,0.75f,0.0f,alpha), 0.35f*alpha);
+#else
         float tw=uiMessage.size()*10.0f;
         drawRect(WIN_W/2-tw/2-8, WIN_H/2-16, tw+16, 28, Color(0,0,0,0.5f*alpha));
         drawTextLarge(WIN_W/2-tw/2, WIN_H/2-8, uiMessage, Color(1,1,0.3f,alpha));
+#endif
     }
 
-    // Pause hint
+    // ── Pause hint ────────────────────────────────────────────────────────────
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(WIN_W-96,14,"[P] PAUSE", Color(0.38f,0.35f,0.50f), 1.4f);
+#else
     drawText(WIN_W-80,12,"[P] Pause", Color(0.5f,0.5f,0.5f), GLUT_BITMAP_HELVETICA_12);
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// drawMenu
+// drawMenu — Retro Arcade Menu
 // ---------------------------------------------------------------------------
 void Game::drawMenu(){
     drawBackground();
+    float t = globalTime;
 
-    // Title — large text with DDA line decoration
-    float ty=WIN_H-120;
-    drawText(WIN_W/2-160, ty, "CHICKEN INVADERS", Color(1.0f,0.85f,0.0f),
+    // ── Corner bracket decorations (arcade marquee feel) ──────────────────────
+    float bw=180, bh=16;
+    // Top-left bracket
+    drawRect(18, WIN_H-22, bw, 2, Color(0.20f,0.65f,0.85f,0.45f));
+    drawRect(18, WIN_H-22, 2, bh, Color(0.20f,0.65f,0.85f,0.45f));
+    // Top-right bracket
+    drawRect(WIN_W-18-bw, WIN_H-22, bw, 2, Color(0.20f,0.65f,0.85f,0.45f));
+    drawRect(WIN_W-20, WIN_H-22, 2, bh, Color(0.20f,0.65f,0.85f,0.45f));
+    // Bottom-left bracket
+    drawRect(18, 18, bw, 2, Color(0.20f,0.65f,0.85f,0.35f));
+    drawRect(18, 18, 2, bh, Color(0.20f,0.65f,0.85f,0.35f));
+    // Bottom-right bracket
+    drawRect(WIN_W-18-bw, 18, bw, 2, Color(0.20f,0.65f,0.85f,0.35f));
+    drawRect(WIN_W-20, 18, 2, bh, Color(0.20f,0.65f,0.85f,0.35f));
+
+    // ── Title — outlined arcade marquee style ────────────────────────────────
+    float ty = WIN_H - 115;
+#ifdef __EMSCRIPTEN__
+    // Decorative lines above/below title
+    float lineY1 = ty + 28, lineY2 = ty - 10;
+    // Glowing title underline
+    for(int i=0;i<3;i++){
+        float la = 0.55f - i*0.16f;
+        ddaLine((int)(WIN_W/2-185),(int)(lineY2-i),
+                (int)(WIN_W/2+185),(int)(lineY2-i), Color(0.15f,0.85f,0.92f,la));
+        ddaLine((int)(WIN_W/2-185),(int)(lineY1+i),
+                (int)(WIN_W/2+185),(int)(lineY1+i), Color(0.15f,0.85f,0.92f,la));
+    }
+    // Star decorations flanking title
+    drawCircle(WIN_W/2-175, ty+8, 3, Color(0.20f,0.95f,0.85f));
+    drawCircle(WIN_W/2+175, ty+8, 3, Color(0.20f,0.95f,0.85f));
+    // Main title — large outlined arcade cyan
+    renderArcadeTextOutlined(WIN_W/2-168, ty, "CHICKEN INVADERS",
+        Color(0.10f,0.95f,0.88f), 2.4f,
+        Color(0.0f,0.22f,0.32f,0.95f));
+#else
+    drawText(WIN_W/2-160, ty, "CHICKEN INVADERS", Color(0.10f,0.95f,0.88f),
              GLUT_BITMAP_TIMES_ROMAN_24);
-    ddaLine(WIN_W/2-165,(int)(ty-10), WIN_W/2+165,(int)(ty-10), Color(1,0.8f,0));
-    ddaLine(WIN_W/2-165,(int)(ty+26), WIN_W/2+165,(int)(ty+26), Color(1,0.8f,0));
+    ddaLine(WIN_W/2-165,(int)(ty-10), WIN_W/2+165,(int)(ty-10), Color(0,0.8f,0.8f));
+    ddaLine(WIN_W/2-165,(int)(ty+26), WIN_W/2+165,(int)(ty+26), Color(0,0.8f,0.8f));
+#endif
 
-    drawText(WIN_W/2-80, WIN_H/2+20,"PRESS SPACE TO START", Color(1,1,1));
+    // ── "PRESS ENTER" — classic arcade blinking ──────────────────────────────
+    float blinkA = 0.45f + 0.55f * std::abs(std::sin(t * 2.8f));
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextGlow(WIN_W/2-130, WIN_H/2+18, "PRESS ENTER TO START",
+        Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
+        Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
+    // Controls — dimmer secondary info
+    renderArcadeText(WIN_W/2-122, WIN_H/2-10, "WASD / ARROWS = MOVE",
+        Color(0.50f,0.50f,0.65f,0.85f), 1.4f);
+    renderArcadeText(WIN_W/2-114, WIN_H/2-30, "HOLD SPACE=SHOOT  P=PAUSE",
+        Color(0.42f,0.65f,0.55f,0.85f), 1.4f);
+#else
+    drawText(WIN_W/2-80, WIN_H/2+20,"PRESS ENTER TO START", Color(1,1,1,blinkA));
     drawText(WIN_W/2-100, WIN_H/2-10,"WASD or Arrow Keys to Move", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
-    drawText(WIN_W/2-90, WIN_H/2-28,"Auto-shooting  |  P = Pause", Color(0.7f,0.7f,0.7f),
+    drawText(WIN_W/2-100, WIN_H/2-28,"Hold Space = Shoot | P = Pause", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
+#endif
 
-    // Draw a decorative chicken
-    float t=globalTime;
+    // ── Decorative chicken — uses enhanced Enemy visuals automatically ────────
     float cx=WIN_W/2.0f, cy=WIN_H/2.0f-120;
     Enemy demo(cx+50*std::sin(t*0.5f), cy, EnemyType::NORMAL);
     demo.animTime = t*2;
     demo.wingFlap = 25.0f*std::sin(t*4);
     demo.draw();
 
+    // ── Footer credit ─────────────────────────────────────────────────────────
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(WIN_W/2-112, 28, "COMPUTER GRAPHICS PROJECT",
+        Color(0.38f,0.35f,0.52f,0.75f), 1.3f);
+#else
     drawText(WIN_W/2-80, 30, "Computer Graphics Project", Color(0.5f,0.5f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// drawPauseScreen
+// drawPauseScreen — Retro Pause Overlay
 // ---------------------------------------------------------------------------
 void Game::drawPauseScreen(){
-    // Dim overlay
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-    drawRect(0,0,WIN_W,WIN_H, Color(0,0,0,0.55f));
+    drawRect(0,0,WIN_W,WIN_H, Color(0,0,0,0.62f));
     glDisable(GL_BLEND);
 
-    drawTextLarge(WIN_W/2-50, WIN_H/2+20,"PAUSED", Color(1,1,0.5f));
+    // Retro pause box (charcoal with arcade green borders)
+    float bx=WIN_W/2-140, by=WIN_H/2-50;
+    drawRect(bx, by, 280, 100, Color(0.04f,0.08f,0.06f,0.95f));
+    drawRectOutline(bx, by, 280, 100, Color(0.0f,0.85f,0.45f,0.85f), 2.0f);
+    // Inner border
+    drawRectOutline(bx+4, by+4, 272, 92, Color(0.0f,0.45f,0.25f,0.50f), 1.0f);
+    // Corner dots
+    drawCircle(bx+5,   by+5,   3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+275, by+5,   3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+5,   by+95,  3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+275, by+95,  3, Color(0.0f,0.95f,0.55f));
+
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextOutlined(WIN_W/2-60, WIN_H/2+22, "PAUSED",
+        Color(0.0f,0.95f,0.55f), 2.4f, Color(0.0f,0.25f,0.12f,0.9f));
+    renderArcadeText(WIN_W/2-126, WIN_H/2-12, "[P] RESUME  [Q] MENU",
+        Color(0.75f,0.88f,0.80f,0.88f), 1.4f);
+#else
+    drawTextLarge(WIN_W/2-50, WIN_H/2+20,"PAUSED", Color(0.0f,0.95f,0.55f));
     drawText(WIN_W/2-80, WIN_H/2-10,"[P] Resume  |  [Q] Quit to Menu", Color(0.8f,0.8f,0.8f));
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// drawGameOver
+// drawGameOver — Retro Dramatic Game Over Screen
 // ---------------------------------------------------------------------------
 void Game::drawGameOver(){
     drawBackground();
-    drawRect(WIN_W/2-160, WIN_H/2-50, 320, 120, Color(0.1f,0.0f,0.0f,0.85f));
-    drawRectOutline(WIN_W/2-160, WIN_H/2-50, 320, 120, Color(0.9f,0.1f,0.1f), 3.0f);
-    drawTextLarge(WIN_W/2-100, WIN_H/2+30,"GAME OVER", Color(0.9f,0.1f,0.1f));
-    drawText(WIN_W/2-70, WIN_H/2+5,"Score: "+std::to_string(player.score), Color(1,1,0.5f));
-    drawText(WIN_W/2-110, WIN_H/2-15,"PRESS SPACE to return to menu", Color(0.7f,0.7f,0.7f));
-    // Explosion particles still animating
+
+    // Explosion particles
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     for(auto& p : particles){
         if(!p.active) continue;
         float alpha=p.life/p.maxLife;
         Color pc=p.color; pc.a*=alpha;
         drawCircle(p.x,p.y,p.size*alpha,pc);
     }
+    glDisable(GL_BLEND);
+
+    // Pulsing red glow behind box
+    float pulse = 0.10f + 0.08f * std::abs(std::sin(globalTime * 2.5f));
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    drawCircle(WIN_W/2, WIN_H/2, 200, Color(0.5f,0.02f,0.02f, pulse));
+    glDisable(GL_BLEND);
+
+    // Main box — dark with layered red border
+    float bx=WIN_W/2-185, by=WIN_H/2-65;
+    drawRect(bx, by, 370, 140, Color(0.06f,0.00f,0.00f,0.95f));
+    drawRectOutline(bx,   by,   370, 140, Color(0.75f,0.05f,0.05f,0.90f), 3.0f);
+    drawRectOutline(bx+5, by+5, 360, 130, Color(0.45f,0.02f,0.02f,0.60f), 1.5f);
+    // Corner flame markers
+    drawCircle(bx+5,   by+5,   5, Color(0.9f,0.2f,0.0f,0.7f));
+    drawCircle(bx+365, by+5,   5, Color(0.9f,0.2f,0.0f,0.7f));
+    drawCircle(bx+5,   by+135, 5, Color(0.9f,0.2f,0.0f,0.7f));
+    drawCircle(bx+365, by+135, 5, Color(0.9f,0.2f,0.0f,0.7f));
+
+    // Pulsing "GAME OVER" text
+    float textPulse = 0.80f + 0.20f * std::abs(std::sin(globalTime * 3.2f));
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextOutlined(WIN_W/2-134, WIN_H/2+32, "GAME OVER",
+        Color(0.95f,0.08f,0.08f,textPulse), 3.2f,
+        Color(0.15f,0.0f,0.0f,0.95f));
+    // Score
+    renderArcadeTextWithShadow(WIN_W/2-80, WIN_H/2+1,
+        "SCORE "+std::to_string(player.score),
+        Color(0.20f,0.95f,0.85f), 1.7f, 1.5f);
+    // Blinking "PRESS ENTER"
+    float ba = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
+    renderArcadeText(WIN_W/2-128, WIN_H/2-22, "PRESS ENTER TO CONTINUE",
+        Color(0.62f,0.60f,0.70f,ba), 1.4f);
+#else
+    drawTextLarge(WIN_W/2-100, WIN_H/2+30,"GAME OVER", Color(0.9f,0.1f,0.1f,textPulse));
+    drawText(WIN_W/2-70, WIN_H/2+5,"Score: "+std::to_string(player.score), Color(0.2f,0.95f,0.85f));
+    drawText(WIN_W/2-110, WIN_H/2-15,"PRESS ENTER to return to menu", Color(0.7f,0.7f,0.7f));
+#endif
 }
 
 // ---------------------------------------------------------------------------
-// drawWinScreen
+// drawWinScreen — Retro Victory Screen
 // ---------------------------------------------------------------------------
 void Game::drawWinScreen(){
     drawBackground();
-    drawRect(WIN_W/2-170, WIN_H/2-50, 340, 130, Color(0.0f,0.05f,0.0f,0.85f));
-    drawRectOutline(WIN_W/2-170, WIN_H/2-50, 340, 130, Color(0.2f,1.0f,0.3f), 3.0f);
+
+    // Victory celebration: still-animating particles
+    glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    for(auto& p : particles){
+        if(!p.active) continue;
+        float alpha=p.life/p.maxLife;
+        Color pc=p.color; pc.a*=alpha;
+        drawCircle(p.x,p.y,p.size*alpha,pc);
+    }
+    // Emerald green glow behind box
+    float victPulse = 0.08f + 0.06f*std::abs(std::sin(globalTime*2.0f));
+    drawCircle(WIN_W/2, WIN_H/2, 220, Color(0.0f,0.5f,0.2f,victPulse));
+    glDisable(GL_BLEND);
+
+    // Main box — dark green with layered border
+    float bx=WIN_W/2-185, by=WIN_H/2-65;
+    drawRect(bx, by, 370, 150, Color(0.00f,0.06f,0.01f,0.95f));
+    drawRectOutline(bx,   by,   370, 150, Color(0.18f,0.92f,0.28f,0.90f), 3.0f);
+    drawRectOutline(bx+5, by+5, 360, 140, Color(0.10f,0.55f,0.16f,0.55f), 1.5f);
+    // Corner stars
+    drawCircle(bx+5,   by+5,   5, Color(0.8f,1.0f,0.2f,0.8f));
+    drawCircle(bx+365, by+5,   5, Color(0.8f,1.0f,0.2f,0.8f));
+    drawCircle(bx+5,   by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
+    drawCircle(bx+365, by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
+
+#ifdef __EMSCRIPTEN__
+    // "YOU WIN!" — outlined, bright
+    renderArcadeTextOutlined(WIN_W/2-102, WIN_H/2+42, "YOU WIN!",
+        Color(0.22f,1.0f,0.32f), 3.0f,
+        Color(0.0f,0.15f,0.0f,0.95f));
+    // Score — glowing arcade cyan
+    renderArcadeTextGlow(WIN_W/2-104, WIN_H/2+10,
+        "SCORE "+std::to_string(player.score),
+        Color(0.0f,0.95f,0.85f), 1.7f,
+        Color(0.0f,0.60f,0.50f), 0.28f);
+    renderArcadeTextWithShadow(WIN_W/2-68, WIN_H/2-12,
+        "COINS "+std::to_string(player.coins),
+        Color(1.0f,0.70f,0.20f), 1.6f, 1.2f);
+    // Blinking continue
+    float baWin = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
+    renderArcadeText(WIN_W/2-128, WIN_H/2-32, "PRESS ENTER TO CONTINUE",
+        Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+#else
     drawTextLarge(WIN_W/2-100, WIN_H/2+40, "YOU WIN!", Color(0.2f,1.0f,0.3f));
     drawText(WIN_W/2-80, WIN_H/2+12,"Final Score: "+std::to_string(player.score), Color(1,1,0.3f));
     drawText(WIN_W/2-80, WIN_H/2-8, "Coins: "+std::to_string(player.coins), Color(1,0.85f,0));
-    drawText(WIN_W/2-110, WIN_H/2-28,"PRESS SPACE to return to menu", Color(0.7f,0.7f,0.7f));
+    drawText(WIN_W/2-110, WIN_H/2-28,"PRESS ENTER to return to menu", Color(0.7f,0.7f,0.7f));
+#endif
 }
 
 // ---------------------------------------------------------------------------
@@ -780,15 +1038,15 @@ void Game::display(){
             player.draw();
 
             // Draw particles
+            glEnable(GL_BLEND);
+            glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
             for(auto& p : particles){
                 if(!p.active) continue;
                 float alpha=p.life/p.maxLife;
                 Color pc=p.color; pc.a*=alpha;
-                glEnable(GL_BLEND);
-                glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
                 drawCircle(p.x,p.y,p.size*alpha,pc);
-                glDisable(GL_BLEND);
             }
+            glDisable(GL_BLEND);
 
             drawHUD();
 
