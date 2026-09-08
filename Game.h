@@ -42,6 +42,26 @@ struct Particle {
 };
 
 // ---------------------------------------------------------------------------
+// Floating score / combo popup text
+// ---------------------------------------------------------------------------
+struct FloatingText {
+    float x, y;
+    float vy;
+    float life, maxLife;
+    std::string text;
+    Color color;
+    float scale;
+    bool active;
+    FloatingText(float x, float y, const std::string& txt, Color c, float sc=1.3f, float maxL=45.0f)
+        : x(x), y(y), vy(1.3f), life(maxL), maxLife(maxL), text(txt), color(c), scale(sc), active(true) {}
+    void update() {
+        y += vy;
+        vy *= 0.96f;
+        if(--life <= 0) active = false;
+    }
+};
+
+// ---------------------------------------------------------------------------
 // Game class
 // ---------------------------------------------------------------------------
 class Game {
@@ -57,6 +77,13 @@ public:
     std::vector<Food>    foods;
     std::vector<Star>    stars;
     std::vector<Particle> particles;
+    std::vector<FloatingText> floatingTexts;
+
+    // Combo / Streak System
+    int comboStreak;
+    int comboMultiplier;
+    int comboTimer;
+    static const int comboMaxTimer = 180; // ~3.0 seconds
 
     Boss*       boss;
     bool        bossSpawned;
@@ -93,6 +120,9 @@ public:
 
     void spawnWave();
     void spawnExplosion(float x, float y, Color c, int count=20);
+    void spawnFloatingText(float x, float y, const std::string& txt, Color c, float scale=1.3f);
+    void updateCombo();
+    void resetCombo(bool showLostText=true);
     void triggerBossWarning();
     void spawnBoss();
 
@@ -108,6 +138,8 @@ public:
     void drawWinScreen();
     void drawStarfield();
     void drawBossWarning();
+    void drawFloatingTexts();
+    void drawComboHUD();
 
 #ifdef __EMSCRIPTEN__
     void drawText(float x, float y, const std::string& s, Color c={1,1,1},
