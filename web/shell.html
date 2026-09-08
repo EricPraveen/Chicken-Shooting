@@ -4,6 +4,33 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chicken Invaders — Retro Arcade Web Edition</title>
+    <!-- Console filter for Emscripten legacy GL emulation notices -->
+    <script>
+        (function() {
+            var origError = console.error;
+            var origWarn = console.warn;
+            function isEmscriptenGlNotice(msg) {
+                if (!msg) return false;
+                var str = String(msg);
+                return str.indexOf('emscripten GL') !== -1 ||
+                       str.indexOf('GL immediate mode') !== -1 ||
+                       str.indexOf('GL emulation') !== -1 ||
+                       str.indexOf('GL_UNSAFE_OPTS') !== -1;
+            }
+            console.error = function() {
+                if (arguments.length > 0 && isEmscriptenGlNotice(arguments[0])) {
+                    return; // Suppress Emscripten legacy GL emulation notices
+                }
+                origError.apply(console, arguments);
+            };
+            console.warn = function() {
+                if (arguments.length > 0 && isEmscriptenGlNotice(arguments[0])) {
+                    return; // Suppress Emscripten legacy GL emulation notices
+                }
+                origWarn.apply(console, arguments);
+            };
+        })();
+    </script>
     <!-- Supabase JS Client v2 CDN -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Project Supabase Config -->
@@ -307,6 +334,143 @@
             color: #64748b;
             font-weight: 400;
         }
+        .custom-dropdown {
+            position: relative;
+            width: 100%;
+            text-align: left;
+        }
+        .custom-dropdown-btn {
+            width: 100%;
+            padding: 11px 12px;
+            background: #090d16;
+            border: 1.5px solid #334155;
+            border-radius: 10px;
+            color: #f8fafc;
+            font-size: 0.92rem;
+            font-weight: 600;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .custom-dropdown-btn:hover,
+        .custom-dropdown.open .custom-dropdown-btn {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+        .custom-dropdown-btn .selected-text {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .custom-dropdown-btn .arrow {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            transition: transform 0.2s;
+            margin-left: 6px;
+        }
+        .custom-dropdown.open .arrow {
+            transform: rotate(180deg);
+        }
+
+        .custom-dropdown-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            left: 0;
+            width: 100%;
+            min-width: 220px;
+            background: #0d1322;
+            border: 1px solid rgba(99, 102, 241, 0.35);
+            border-radius: 12px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.8), 0 0 20px rgba(99, 102, 241, 0.2);
+            z-index: 1200;
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            animation: dropDownAnim 0.15s ease-out forwards;
+        }
+        @keyframes dropDownAnim {
+            from { opacity: 0; transform: translateY(-6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .custom-dropdown.open .custom-dropdown-menu {
+            display: flex;
+        }
+        .custom-dropdown-search {
+            padding: 8px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(15, 23, 42, 0.95);
+        }
+        .custom-dropdown-search input {
+            width: 100%;
+            padding: 7px 10px;
+            background: #080c15;
+            border: 1px solid #334155;
+            border-radius: 6px;
+            color: #f8fafc;
+            font-size: 0.84rem;
+            outline: none;
+        }
+        .custom-dropdown-search input:focus {
+            border-color: #818cf8;
+        }
+        .custom-dropdown-list {
+            max-height: 210px; /* Constrains dropdown to ~6 items with smooth scroll! */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        .custom-dropdown-list::-webkit-scrollbar {
+            width: 5px;
+        }
+        .custom-dropdown-list::-webkit-scrollbar-thumb {
+            background: rgba(99, 102, 241, 0.4);
+            border-radius: 3px;
+        }
+        .custom-dropdown-item {
+            padding: 9px 12px;
+            font-size: 0.88rem;
+            color: #cbd5e1;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: background 0.15s, color 0.15s;
+        }
+        .custom-dropdown-item:hover,
+        .custom-dropdown-item.active {
+            background: rgba(99, 102, 241, 0.25);
+            color: #fff;
+        }
+
+        /* Filter header style */
+        .filter-dropdown {
+            width: auto;
+            min-width: 165px;
+        }
+        .filter-dropdown .custom-dropdown-btn {
+            padding: 6px 12px;
+            font-size: 0.82rem;
+            border-radius: 8px;
+        }
+        .filter-dropdown .custom-dropdown-menu {
+            right: 0;
+            left: auto;
+            width: 230px;
+        }
+
+        .input-row-grid {
+            display: grid;
+            grid-template-columns: 1.5fr 1.5fr;
+            gap: 12px;
+            margin: 16px 0 16px;
+            text-align: left;
+        }
 
         .modal-buttons {
             display: flex;
@@ -518,11 +682,29 @@
                 </div>
             </div>
 
-            <div class="input-group">
-                <label for="playerNameInput">Pilot Name:</label>
-                <input type="text" id="playerNameInput" placeholder="Enter pilot callsign..." maxlength="20" autocomplete="off" />
-                <div id="submitMsg" class="msg-box"></div>
+            <div class="input-row-grid">
+                <div class="input-group" style="margin:0;">
+                    <label for="playerNameInput">Pilot Name:</label>
+                    <input type="text" id="playerNameInput" placeholder="Enter callsign..." maxlength="20" autocomplete="off" />
+                </div>
+                <div class="input-group" style="margin:0;">
+                    <label>Country:</label>
+                    <div class="custom-dropdown" id="playerCountryDropdown">
+                        <button type="button" class="custom-dropdown-btn" id="playerCountryBtn">
+                            <span class="selected-text" id="playerCountrySelectedText">🇱🇰 Sri Lanka</span>
+                            <span class="arrow">▾</span>
+                        </button>
+                        <div class="custom-dropdown-menu" id="playerCountryMenu">
+                            <div class="custom-dropdown-search">
+                                <input type="text" id="playerCountrySearch" placeholder="🔍 Search country..." autocomplete="off" />
+                            </div>
+                            <div class="custom-dropdown-list" id="playerCountryList"></div>
+                        </div>
+                        <input type="hidden" id="playerCountryValue" value="LK" />
+                    </div>
+                </div>
             </div>
+            <div id="submitMsg" class="msg-box"></div>
 
             <div class="modal-buttons">
                 <button id="btnSubmitScore" class="btn-primary">🚀 Submit to Hall of Fame</button>
@@ -544,9 +726,24 @@
                     <h2>🏆 Global Hall of Fame</h2>
                     <p style="color:#94a3b8; font-size:0.82rem; margin-top:2px;">Top pilots worldwide ranked by score & time</p>
                 </div>
-                <button id="btnRefreshScores" class="lb-btn-refresh">
-                    ↻ Refresh
-                </button>
+                <div style="display:flex; gap:8px; align-items:center;">
+                    <div class="custom-dropdown filter-dropdown" id="lbFilterDropdown">
+                        <button type="button" class="custom-dropdown-btn" id="lbFilterBtn">
+                            <span class="selected-text" id="lbFilterSelectedText">🌍 All Countries</span>
+                            <span class="arrow">▾</span>
+                        </button>
+                        <div class="custom-dropdown-menu" id="lbFilterMenu">
+                            <div class="custom-dropdown-search">
+                                <input type="text" id="lbFilterSearch" placeholder="🔍 Search country..." autocomplete="off" />
+                            </div>
+                            <div class="custom-dropdown-list" id="lbFilterList"></div>
+                        </div>
+                        <input type="hidden" id="lbFilterValue" value="ALL" />
+                    </div>
+                    <button id="btnRefreshScores" class="lb-btn-refresh">
+                        ↻ Refresh
+                    </button>
+                </div>
             </div>
 
             <div class="lb-table-wrapper">
@@ -587,6 +784,11 @@
                 console.log(text);
             },
             printErr: function(text) {
+                if (!text) return;
+                var str = String(text);
+                if (str.indexOf('emscripten GL') !== -1 || str.indexOf('GL immediate mode') !== -1 || str.indexOf('GL emulation') !== -1 || str.indexOf('GL_UNSAFE_OPTS') !== -1) {
+                    return;
+                }
                 console.error(text);
             },
             canvas: (function() {
@@ -637,6 +839,8 @@
         var scoreModalBackdrop = document.getElementById('scoreModalBackdrop');
         var leaderboardModalBackdrop = document.getElementById('leaderboardModalBackdrop');
         var playerNameInput = document.getElementById('playerNameInput');
+        var playerCountrySelect = document.getElementById('playerCountrySelect');
+        var lbCountryFilter = document.getElementById('lbCountryFilter');
         var modalScoreVal = document.getElementById('modalScoreVal');
         var modalCoinsVal = document.getElementById('modalCoinsVal');
         var endGameTag = document.getElementById('endGameTag');
@@ -645,10 +849,225 @@
         var btnSubmitScore = document.getElementById('btnSubmitScore');
         var leaderboardTableBody = document.getElementById('leaderboardTableBody');
 
+        // =====================================================================
+        // Global Country Directory (All ISO 3166-1 Nations & Territories)
+        // =====================================================================
+        var ALL_COUNTRY_CODES = [
+            "AF", "AX", "AL", "DZ", "AS", "AD", "AO", "AI", "AQ", "AG", "AR", "AM", "AW", "AU", "AT", "AZ",
+            "BS", "BH", "BD", "BB", "BY", "BE", "BZ", "BJ", "BM", "BT", "BO", "BA", "BW", "BV", "BR", "IO",
+            "BN", "BG", "BF", "BI", "KH", "CM", "CA", "CV", "KY", "CF", "TD", "CL", "CN", "CX", "CC", "CO",
+            "KM", "CG", "CD", "CK", "CR", "CI", "HR", "CU", "CY", "CZ", "DK", "DJ", "DM", "DO", "EC", "EG",
+            "SV", "GQ", "ER", "EE", "ET", "FK", "FO", "FJ", "FI", "FR", "GF", "PF", "TF", "GA", "GM", "GE",
+            "DE", "GH", "GI", "GR", "GL", "GD", "GP", "GU", "GT", "GG", "GN", "GW", "GY", "HT", "HM", "VA",
+            "HN", "HK", "HU", "IS", "IN", "ID", "IR", "IQ", "IE", "IM", "IL", "IT", "JM", "JP", "JE", "JO",
+            "KZ", "KE", "KI", "KP", "KR", "KW", "KG", "LA", "LV", "LB", "LS", "LR", "LY", "LI", "LT", "LU",
+            "MO", "MK", "MG", "MW", "MY", "MV", "ML", "MT", "MH", "MQ", "MR", "MU", "YT", "MX", "FM", "MD",
+            "MC", "MN", "ME", "MS", "MA", "MZ", "MM", "NA", "NR", "NP", "NL", "NC", "NZ", "NI", "NE", "NG",
+            "NU", "NF", "MP", "NO", "OM", "PK", "PW", "PS", "PA", "PG", "PY", "PE", "PH", "PN", "PL", "PT",
+            "PR", "QA", "RE", "RO", "RU", "RW", "BL", "SH", "KN", "LC", "MF", "PM", "VC", "WS", "SM", "ST",
+            "SA", "SN", "RS", "SC", "SL", "SG", "SK", "SI", "SB", "SO", "ZA", "GS", "SS", "ES", "LK", "SD",
+            "SR", "SJ", "SZ", "SE", "CH", "SY", "TW", "TJ", "TZ", "TH", "TL", "TG", "TK", "TO", "TT", "TN",
+            "TR", "TM", "TC", "TV", "UG", "UA", "AE", "GB", "US", "UM", "UY", "UZ", "VU", "VE", "VN", "VG",
+            "VI", "WF", "EH", "YE", "ZM", "ZW"
+        ];
+
+        function getFlagEmoji(code) {
+            if (!code || code.length !== 2) return '🌍';
+            code = code.toUpperCase();
+            var offset = 127397;
+            try {
+                return String.fromCodePoint(code.charCodeAt(0) + offset, code.charCodeAt(1) + offset);
+            } catch (e) {
+                return '🌍';
+            }
+        }
+
+        var regionNames = null;
+        try {
+            regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+        } catch (e) {}
+
+        function getCountryName(code) {
+            if (regionNames && code && code.length === 2) {
+                try {
+                    var n = regionNames.of(code.toUpperCase());
+                    if (n) return n;
+                } catch (e) {}
+            }
+            return code || '';
+        }
+
+        var COUNTRIES_LIST = [];
+        var NAME_TO_CODE = {};
+        ALL_COUNTRY_CODES.forEach(function(code) {
+            var name = getCountryName(code);
+            var flag = getFlagEmoji(code);
+            COUNTRIES_LIST.push({ code: code, name: name, flag: flag });
+            NAME_TO_CODE[name.toLowerCase()] = code;
+            NAME_TO_CODE[code.toLowerCase()] = code;
+        });
+
+        // Sort alphabetically by English country name
+        COUNTRIES_LIST.sort(function(a, b) {
+            return a.name.localeCompare(b.name);
+        });
+
+        function populateCustomDropdowns() {
+            var playerList = document.getElementById('playerCountryList');
+            var filterList = document.getElementById('lbFilterList');
+
+            if (playerList) {
+                var pHtml = '';
+                COUNTRIES_LIST.forEach(function(c) {
+                    pHtml += '<div class="custom-dropdown-item" data-code="' + c.code + '" data-name="' + c.name + '">'
+                          + '<span>' + c.flag + '</span><span>' + c.name + '</span></div>';
+                });
+                playerList.innerHTML = pHtml;
+            }
+
+            if (filterList) {
+                var fHtml = '<div class="custom-dropdown-item active" data-code="ALL" data-name="All Countries (Global)">'
+                          + '<span>🌍</span><span>All Countries (Global)</span></div>';
+                COUNTRIES_LIST.forEach(function(c) {
+                    fHtml += '<div class="custom-dropdown-item" data-code="' + c.code + '" data-name="' + c.name + '">'
+                          + '<span>' + c.flag + '</span><span>' + c.name + '</span></div>';
+                });
+                filterList.innerHTML = fHtml;
+            }
+        }
+        populateCustomDropdowns();
+
+        function bindCustomDropdown(dropdownId, btnId, listId, searchId, valId, textId, onSelect) {
+            var dropdown = document.getElementById(dropdownId);
+            var btn = document.getElementById(btnId);
+            var list = document.getElementById(listId);
+            var search = document.getElementById(searchId);
+            var valInput = document.getElementById(valId);
+            var textSpan = document.getElementById(textId);
+
+            if (!dropdown || !btn || !list) return;
+
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var wasOpen = dropdown.classList.contains('open');
+                document.querySelectorAll('.custom-dropdown.open').forEach(function(d) {
+                    d.classList.remove('open');
+                });
+                if (!wasOpen) {
+                    dropdown.classList.add('open');
+                    if (search) {
+                        search.value = '';
+                        filterItems('');
+                        setTimeout(function() { search.focus(); }, 50);
+                    }
+                }
+            });
+
+            if (search) {
+                search.addEventListener('input', function() {
+                    filterItems(search.value.toLowerCase().trim());
+                });
+                search.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                });
+            }
+
+            function filterItems(query) {
+                var items = list.querySelectorAll('.custom-dropdown-item');
+                items.forEach(function(item) {
+                    var name = (item.getAttribute('data-name') || '').toLowerCase();
+                    if (!query || name.includes(query)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
+                });
+            }
+
+            list.addEventListener('click', function(e) {
+                var item = e.target.closest('.custom-dropdown-item');
+                if (!item) return;
+                e.stopPropagation();
+                var code = item.getAttribute('data-code');
+                var name = item.getAttribute('data-name');
+                var flag = getFlag(code);
+                valInput.value = code;
+                textSpan.textContent = flag + ' ' + name;
+                list.querySelectorAll('.custom-dropdown-item').forEach(function(it) {
+                    it.classList.toggle('active', it === item);
+                });
+                dropdown.classList.remove('open');
+                if (onSelect) onSelect(code);
+            });
+        }
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.custom-dropdown')) {
+                document.querySelectorAll('.custom-dropdown.open').forEach(function(d) {
+                    d.classList.remove('open');
+                });
+            }
+        });
+
+        bindCustomDropdown('playerCountryDropdown', 'playerCountryBtn', 'playerCountryList', 'playerCountrySearch', 'playerCountryValue', 'playerCountrySelectedText');
+        bindCustomDropdown('lbFilterDropdown', 'lbFilterBtn', 'lbFilterList', 'lbFilterSearch', 'lbFilterValue', 'lbFilterSelectedText', function(code) {
+            fetchLeaderboard();
+        });
+
+        function setPlayerCountry(code) {
+            var valInput = document.getElementById('playerCountryValue');
+            var textSpan = document.getElementById('playerCountrySelectedText');
+            if (valInput) valInput.value = code;
+            if (textSpan) {
+                var name = getCountryName(code);
+                var flag = getFlag(code);
+                textSpan.textContent = flag + ' ' + name;
+            }
+        }
+
+        function getFlag(code) {
+            if (!code) return '🌍';
+            var clean = String(code).trim();
+            if (/[\uD800-\uDBFF][\uDC00-\uDFFF]/.test(clean)) return clean;
+            var lower = clean.toLowerCase();
+            if (NAME_TO_CODE[lower]) {
+                return getFlagEmoji(NAME_TO_CODE[lower]);
+            }
+            if (clean.length === 2) {
+                return getFlagEmoji(clean);
+            }
+            return '🌍';
+        }
+
+        function detectUserCountry() {
+            var saved = localStorage.getItem('chicken_pilot_country');
+            if (saved && NAME_TO_CODE[saved.toLowerCase()]) return NAME_TO_CODE[saved.toLowerCase()];
+            try {
+                var tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                if (tz.includes('Colombo')) return 'LK';
+                if (tz.includes('Kolkata') || tz.includes('Calcutta') || tz.includes('India')) return 'IN';
+                if (tz.includes('New_York') || tz.includes('Chicago') || tz.includes('Denver') || tz.includes('Los_Angeles') || tz.includes('America/')) return 'US';
+                if (tz.includes('London') || tz.includes('Europe/London')) return 'GB';
+                if (tz.includes('Toronto') || tz.includes('Vancouver')) return 'CA';
+                if (tz.includes('Sydney') || tz.includes('Melbourne') || tz.includes('Brisbane')) return 'AU';
+                if (tz.includes('Singapore')) return 'SG';
+                if (tz.includes('Kuala_Lumpur')) return 'MY';
+                if (tz.includes('Dubai')) return 'AE';
+                if (tz.includes('Berlin')) return 'DE';
+                if (tz.includes('Paris')) return 'FR';
+                if (tz.includes('Tokyo')) return 'JP';
+                if (tz.includes('Seoul')) return 'KR';
+                if (tz.includes('Sao_Paulo')) return 'BR';
+            } catch (e) {}
+            return 'LK';
+        }
+
+        setPlayerCountry(detectUserCountry());
+
         // Prevent Emscripten from capturing or preventing default on input elements
         ['keydown', 'keyup', 'keypress'].forEach(function(eventType) {
             window.addEventListener(eventType, function(e) {
-                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA')) {
                     e.stopImmediatePropagation();
                 }
             }, true); // Capture phase runs before Emscripten window listeners
@@ -673,6 +1092,8 @@
             submitMsg.className = 'msg-box';
             btnSubmitScore.disabled = false;
             btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
+
+            setPlayerCountry(detectUserCountry());
 
             if (isWin) {
                 endGameTag.className = 'modal-tag tag-win';
@@ -699,7 +1120,10 @@
                 playerNameInput.value = name;
             }
 
+            var selectedCountry = document.getElementById('playerCountryValue') ? document.getElementById('playerCountryValue').value : 'GLOBAL';
             localStorage.setItem('chicken_pilot_name', name);
+            localStorage.setItem('chicken_pilot_country', selectedCountry);
+
             btnSubmitScore.disabled = true;
             btnSubmitScore.textContent = 'Submitting...';
             submitMsg.textContent = '';
@@ -713,12 +1137,27 @@
             }
 
             try {
+                var payload = {
+                    player_name: name,
+                    score: currentEndScore,
+                    country: selectedCountry
+                };
+
                 var { data, error } = await sbClient
                     .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
-                    .insert([
-                        { player_name: name, score: currentEndScore }
-                    ])
+                    .insert([payload])
                     .select();
+
+                // If country column is not created yet in Supabase, retry without it
+                if (error && error.message && error.message.toLowerCase().includes('country')) {
+                    console.warn("Country column missing in DB, falling back to basic insert:", error.message);
+                    var fallback = await sbClient
+                        .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
+                        .insert([{ player_name: name, score: currentEndScore }])
+                        .select();
+                    data = fallback.data;
+                    error = fallback.error;
+                }
 
                 if (error) {
                     console.error("Supabase insert error:", error);
@@ -735,6 +1174,10 @@
 
                     setTimeout(function() {
                         scoreModalBackdrop.style.display = 'none';
+                        var fVal = document.getElementById('lbFilterValue');
+                        var fTxt = document.getElementById('lbFilterSelectedText');
+                        if (fVal) fVal.value = 'ALL';
+                        if (fTxt) fTxt.textContent = '🌍 All Countries (Global)';
                         openLeaderboardModal();
                     }, 600);
                 }
@@ -766,7 +1209,8 @@
         }
 
         async function fetchLeaderboard() {
-            leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">Fetching global rankings...</td></tr>';
+            var filterVal = document.getElementById('lbFilterValue') ? document.getElementById('lbFilterValue').value : 'ALL';
+            leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">Fetching rankings...</td></tr>';
             
             if (!sbClient) {
                 leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">Supabase client is not connected. Check supabase-config.js.</td></tr>';
@@ -775,12 +1219,37 @@
 
             try {
                 // Fetch top 50: highest score first; on tie, earlier submission first
-                var { data, error } = await sbClient
+                var query = sbClient
                     .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
-                    .select('id, player_name, score, created_at')
+                    .select('id, player_name, score, country, created_at')
                     .order('score', { ascending: false })
-                    .order('created_at', { ascending: true })
-                    .limit(50);
+                    .order('created_at', { ascending: true });
+
+                if (filterVal && filterVal !== 'ALL') {
+                    var cName = getCountryName(filterVal);
+                    if (cName && cName !== filterVal) {
+                        query = query.or('country.eq.' + filterVal + ',country.ilike.' + cName);
+                    } else {
+                        query = query.eq('country', filterVal);
+                    }
+                }
+
+                var { data, error } = await query.limit(50);
+
+                if (error) {
+                    // If error is about missing country column, retry without country select
+                    if (error.message && error.message.toLowerCase().includes('country')) {
+                        console.warn("Retrying fetch without country column...");
+                        var fallbackRes = await sbClient
+                            .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
+                            .select('id, player_name, score, created_at')
+                            .order('score', { ascending: false })
+                            .order('created_at', { ascending: true })
+                            .limit(50);
+                        data = fallbackRes.data;
+                        error = fallbackRes.error;
+                    }
+                }
 
                 if (error) {
                     console.error("Leaderboard fetch error:", error);
@@ -789,7 +1258,10 @@
                 }
 
                 if (!data || data.length === 0) {
-                    leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">No scores yet! Be the first pilot in the Hall of Fame.</td></tr>';
+                    var emptyText = (filterVal !== 'ALL')
+                        ? 'No scores found for this country yet. Be the first!'
+                        : 'No scores yet! Be the first pilot in the Hall of Fame.';
+                    leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">' + emptyText + '</td></tr>';
                     return;
                 }
 
@@ -820,6 +1292,8 @@
                         dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
                     }
 
+                    var flag = getFlag(item.country);
+
                     // Sanitize name for HTML display
                     var safeName = document.createElement('div');
                     safeName.textContent = item.player_name;
@@ -827,7 +1301,7 @@
 
                     html += '<tr class="' + rowClass + '">'
                         + '<td style="text-align:center;"><span class="' + rankClass + '">' + rankDisplay + '</span></td>'
-                        + '<td style="font-weight:600;">' + escapedName + (isNew ? ' <span style="font-size:0.75rem; color:#818cf8; font-weight:bold;">(YOU)</span>' : '') + '</td>'
+                        + '<td style="font-weight:600;"><span style="font-size:1.15rem; margin-right:7px; vertical-align:middle;" title="' + (item.country || 'Global') + '">' + flag + '</span>' + escapedName + (isNew ? ' <span style="font-size:0.75rem; color:#818cf8; font-weight:bold;">(YOU)</span>' : '') + '</td>'
                         + '<td style="text-align:right;" class="score-cell">' + Number(item.score).toLocaleString() + '</td>'
                         + '<td style="text-align:right;" class="date-cell">' + dateStr + '</td>'
                         + '</tr>';
