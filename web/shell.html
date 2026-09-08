@@ -193,16 +193,22 @@
             align-items: center;
             justify-content: space-between;
             width: 100%;
-            padding: 0 6px 6px 6px;
+            padding: 0 4px 6px 4px;
             font-family: var(--font-pixel);
             font-size: 0.44rem;
             color: #64748b;
-            letter-spacing: 2px;
+            letter-spacing: 1px;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            gap: 6px;
         }
         .cabinet-badge {
             display: inline-flex;
             align-items: center;
             gap: 6px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
         .cabinet-led {
             display: inline-flex;
@@ -294,10 +300,15 @@
         canvas.emscripten {
             border: 0px none;
             background-color: black;
-            width: 100%;
-            height: 100%;
             outline: none;
             display: block;
+            aspect-ratio: 4 / 3;
+            max-width: 100%;
+            max-height: 100%;
+            width: auto;
+            height: auto;
+            object-fit: contain;
+            margin: auto;
         }
 
         /* ── Controls card ── */
@@ -1341,6 +1352,30 @@
         :-webkit-full-screen .controls-card {
             display: none !important;
         }
+        /* ── Fullscreen Mode CSS ── */
+        body.fullscreen-mode,
+        :fullscreen body,
+        :-webkit-full-screen body {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            max-height: 100dvh !important;
+            overflow: hidden !important;
+            background: #000 !important;
+            justify-content: flex-start !important;
+        }
+        body.fullscreen-mode header,
+        :fullscreen header,
+        :-webkit-full-screen header {
+            display: none !important;
+        }
+        body.fullscreen-mode .controls-card,
+        :fullscreen .controls-card,
+        :-webkit-full-screen .controls-card {
+            display: none !important;
+        }
         body.fullscreen-mode .arcade-cabinet,
         :fullscreen .arcade-cabinet,
         :-webkit-full-screen .arcade-cabinet {
@@ -1351,23 +1386,43 @@
             aspect-ratio: auto !important;
             border: none !important;
             border-radius: 0 !important;
-            padding: env(safe-area-inset-top, 2px) env(safe-area-inset-right, 4px) env(safe-area-inset-bottom, 2px) env(safe-area-inset-left, 4px) !important;
+            padding: env(safe-area-inset-top, 4px) 6px 0 6px !important;
             box-shadow: none !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: space-between !important;
+            background: #0b0f19 !important;
         }
         body.fullscreen-mode .canvas-container,
         :fullscreen .canvas-container,
         :-webkit-full-screen .canvas-container {
             flex: 1 1 0 !important;
             width: 100% !important;
-            height: 100% !important;
-            max-height: none !important;
+            height: auto !important;
+            min-height: 0 !important;
+            max-height: calc(100dvh - 165px) !important;
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            background: #000 !important;
+            border: none !important;
+        }
+        body.fullscreen-mode canvas.emscripten,
+        :fullscreen canvas.emscripten,
+        :-webkit-full-screen canvas.emscripten {
+            max-width: 100% !important;
+            max-height: 100% !important;
+            aspect-ratio: 4 / 3 !important;
+            width: auto !important;
+            height: auto !important;
+            object-fit: contain !important;
         }
         body.fullscreen-mode .virtual-gamepad,
         :fullscreen .virtual-gamepad,
         :-webkit-full-screen .virtual-gamepad {
             display: flex !important;
             flex-shrink: 0 !important;
-            padding: 8px 16px !important;
+            padding: 8px 16px max(24px, env(safe-area-inset-bottom, 24px)) 16px !important;
         }
 
         /* ── Responsive Mobile Optimizations ── */
@@ -1376,7 +1431,7 @@
         }
         @media (max-width: 768px) {
             body {
-                padding: env(safe-area-inset-top, 2px) env(safe-area-inset-right, 2px) env(safe-area-inset-bottom, 2px) env(safe-area-inset-left, 2px);
+                padding: env(safe-area-inset-top, 2px) env(safe-area-inset-right, 2px) 0 env(safe-area-inset-left, 2px);
                 justify-content: flex-start;
                 height: 100dvh;
                 min-height: 100dvh;
@@ -1391,14 +1446,11 @@
                 font-size: 0.85rem;
                 letter-spacing: 1.5px;
             }
-            p.subtitle {
-                display: none;
+            p.subtitle, .header-actions, .controls-card {
+                display: none !important;
             }
-            .header-actions {
-                display: none;
-            }
-            .controls-card {
-                display: none;
+            .cabinet-badge {
+                display: none !important;
             }
             .arcade-cabinet {
                 width: 100vw;
@@ -1409,18 +1461,32 @@
                 max-height: calc(100dvh - 36px);
                 border: none;
                 border-radius: 0;
-                padding: 4px 4px 6px 4px;
+                padding: 4px 4px 0 4px;
                 box-shadow: none;
+                display: flex;
+                flex-direction: column;
+                justify-content: space-between;
             }
             .canvas-container {
                 flex: 1 1 0;
                 width: 100%;
                 min-height: 0;
-                max-height: calc(100dvh - 170px);
+                max-height: calc(100dvh - 165px);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+            }
+            canvas.emscripten {
+                max-width: 100%;
+                max-height: 100%;
+                aspect-ratio: 4 / 3;
+                width: auto;
+                height: auto;
+                object-fit: contain;
             }
             .virtual-gamepad {
                 display: flex !important;
-                padding: 8px 12px;
+                padding: 6px 12px max(20px, env(safe-area-inset-bottom, 20px)) 12px !important;
                 flex-shrink: 0;
             }
             .joystick-base { width: 110px; height: 110px; }
@@ -1431,8 +1497,11 @@
             .gamepad-pill-btn { font-size: 0.46rem; padding: 7px 12px; }
             .modal-box { padding: 18px 14px; }
         }
-        @media (max-height: 550px) and (orientation: landscape) {
+
+        /* ── Landscape Console Layout ── */
+        @media (orientation: landscape) {
             body {
+                flex-direction: row;
                 padding: 0;
                 height: 100dvh;
                 overflow: hidden;
@@ -1445,12 +1514,32 @@
                 height: 100dvh;
                 border: none;
                 border-radius: 0;
-                padding: 2px 4px;
+                padding: 0;
+            }
+            .cabinet-header {
+                position: absolute;
+                top: 4px;
+                left: 10px;
+                right: 10px;
+                z-index: 30;
+                pointer-events: none;
+            }
+            .cabinet-header button {
+                pointer-events: auto;
             }
             .canvas-container {
                 flex: 1 1 0;
                 width: 100%;
-                height: 100%;
+                height: 100dvh;
+                max-height: 100dvh;
+                border: none;
+                background: #000;
+            }
+            canvas.emscripten {
+                height: 100dvh !important;
+                max-height: 100dvh !important;
+                aspect-ratio: 4 / 3 !important;
+                width: auto !important;
             }
             .virtual-gamepad {
                 position: absolute;
@@ -1459,7 +1548,7 @@
                 border: none;
                 box-shadow: none;
                 pointer-events: none;
-                padding: 0 16px 8px 16px;
+                padding: 0 24px max(14px, env(safe-area-inset-bottom, 14px)) 24px;
                 align-items: flex-end;
                 z-index: 25;
             }
@@ -2868,6 +2957,9 @@
                         req.call(doc).then(function() {
                             document.body.classList.add('fullscreen-mode');
                             updateFullscreenBtn();
+                            if (screen.orientation && screen.orientation.lock) {
+                                screen.orientation.lock('landscape').catch(function(){});
+                            }
                         }).catch(function() {
                             // Fallback to CSS fullscreen
                             document.body.classList.toggle('fullscreen-mode');
@@ -2881,6 +2973,9 @@
                     var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
                     if (exit) {
                         exit.call(document).catch(function(){});
+                    }
+                    if (screen.orientation && screen.orientation.unlock) {
+                        try { screen.orientation.unlock(); } catch(err){}
                     }
                     document.body.classList.remove('fullscreen-mode');
                     updateFullscreenBtn();
