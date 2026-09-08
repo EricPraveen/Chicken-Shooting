@@ -102,12 +102,16 @@ void Game::reset(){
 void Game::checkEndGameNotification(){
     if ((state == GameState::GAME_OVER || state == GameState::WIN) && !notifiedEndGame) {
         notifiedEndGame = true;
+        int livesBonus = std::max(0, player.lives) * 200;
+        int coinBonus = player.coins * 2;
+        int baseCombatScore = player.score;
+        int totalFinalScore = baseCombatScore + livesBonus + coinBonus;
 #ifdef __EMSCRIPTEN__
         EM_ASM({
             if (window.onGameFinished) {
-                window.onGameFinished($0, $1, $2);
+                window.onGameFinished($0, $1, $2, $3, $4, $5);
             }
-        }, player.score, (state == GameState::WIN ? 1 : 0), player.coins);
+        }, totalFinalScore, (state == GameState::WIN ? 1 : 0), player.coins, livesBonus, coinBonus, baseCombatScore);
 #endif
     }
 }
@@ -284,26 +288,28 @@ void Game::handlePickups(){
         if(f.getAABB().intersects(pa)){
             f.active=false;
             player.foodCollected++;
+            player.score += 30;
             spawnExplosion(f.x,f.y,Color(0.3f,1.0f,0.4f),14);
             if(player.foodCollected >= Player::foodForLife){
                 player.foodCollected = 0;
                 if(player.lives < player.maxLives){
                     player.lives++;
-                    uiMessage="\xE2\x98\x85 EXTRA LIFE! \xE2\x98\x85";
+                    player.score += 200;
+                    uiMessage="\xE2\x98\x85 EXTRA LIFE! +200 PTS \xE2\x98\x85";
                     uiMessageTimer=200;
                     // Triple burst for life gain
                     spawnExplosion(player.x,    player.y,    Color(1.0f,1.0f,0.3f),30);
                     spawnExplosion(player.x-25, player.y+10, Color(0.3f,1.0f,0.3f),15);
                     spawnExplosion(player.x+25, player.y+10, Color(0.3f,0.5f,1.0f),15);
                 } else {
-                    uiMessage="Lives FULL! +500 Bonus Score";
+                    uiMessage="Lives FULL! +250 PTS";
                     uiMessageTimer=130;
-                    player.score += 500;
+                    player.score += 250;
                     spawnExplosion(player.x, player.y, Color(1,0.9f,0.1f),20);
                 }
             } else {
                 int rem = Player::foodForLife - player.foodCollected;
-                uiMessage="Food! "+std::to_string(rem)+" more for LIFE";
+                uiMessage="Food! +30 PTS ("+std::to_string(rem)+" more for LIFE)";
                 uiMessageTimer=100;
             }
         }
@@ -313,18 +319,19 @@ void Game::handlePickups(){
         if(!p.active) continue;
         if(p.getAABB().intersects(pa)){
             p.active=false;
+            player.score += 50;
             switch(p.type){
                 case PowerUpType::FIRE_RATE:
                     player.activateFireRate();
-                    uiMessage="FIRE RATE UP!"; uiMessageTimer=120;
+                    uiMessage="FIRE RATE UP! +50 PTS"; uiMessageTimer=120;
                     break;
                 case PowerUpType::SHIELD:
                     player.activateShield();
-                    uiMessage="SHIELD ACTIVE!"; uiMessageTimer=120;
+                    uiMessage="SHIELD ACTIVE! +50 PTS"; uiMessageTimer=120;
                     break;
                 case PowerUpType::STRONG_BULLET:
                     player.activateStrongBullet();
-                    uiMessage="STRONG BULLETS!"; uiMessageTimer=120;
+                    uiMessage="STRONG BULLETS! +50 PTS"; uiMessageTimer=120;
                     break;
             }
             spawnExplosion(p.x,p.y,Color(0.5f,1,1),12);
@@ -927,13 +934,14 @@ void Game::drawGameOver(){
 
     // Pulsing "GAME OVER" text
     float textPulse = 0.80f + 0.20f * std::abs(std::sin(globalTime * 3.2f));
+    int finalScore = player.score + std::max(0, player.lives)*200 + player.coins*2;
 #ifdef __EMSCRIPTEN__
     renderArcadeTextOutlined(WIN_W/2-134, WIN_H/2+32, "GAME OVER",
         Color(0.95f,0.08f,0.08f,textPulse), 3.2f,
         Color(0.15f,0.0f,0.0f,0.95f));
     // Score
     renderArcadeTextWithShadow(WIN_W/2-80, WIN_H/2+1,
-        "SCORE "+std::to_string(player.score),
+        "SCORE "+std::to_string(finalScore),
         Color(0.20f,0.95f,0.85f), 1.7f, 1.5f);
     // Blinking "PRESS ENTER"
     float ba = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
@@ -941,7 +949,7 @@ void Game::drawGameOver(){
         Color(0.62f,0.60f,0.70f,ba), 1.4f);
 #else
     drawTextLarge(WIN_W/2-100, WIN_H/2+30,"GAME OVER", Color(0.9f,0.1f,0.1f,textPulse));
-    drawText(WIN_W/2-70, WIN_H/2+5,"Score: "+std::to_string(player.score), Color(0.2f,0.95f,0.85f));
+    drawText(WIN_W/2-70, WIN_H/2+5,"Score: "+std::to_string(finalScore), Color(0.2f,0.95f,0.85f));
     drawText(WIN_W/2-110, WIN_H/2-15,"PRESS ENTER to return to menu", Color(0.7f,0.7f,0.7f));
 #endif
 }
@@ -976,6 +984,7 @@ void Game::drawWinScreen(){
     drawCircle(bx+5,   by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
     drawCircle(bx+365, by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
 
+    int winScore = player.score + std::max(0, player.lives)*200 + player.coins*2;
 #ifdef __EMSCRIPTEN__
     // "YOU WIN!" — outlined, bright
     renderArcadeTextOutlined(WIN_W/2-102, WIN_H/2+42, "YOU WIN!",
@@ -983,7 +992,7 @@ void Game::drawWinScreen(){
         Color(0.0f,0.15f,0.0f,0.95f));
     // Score — glowing arcade cyan
     renderArcadeTextGlow(WIN_W/2-104, WIN_H/2+10,
-        "SCORE "+std::to_string(player.score),
+        "SCORE "+std::to_string(winScore),
         Color(0.0f,0.95f,0.85f), 1.7f,
         Color(0.0f,0.60f,0.50f), 0.28f);
     renderArcadeTextWithShadow(WIN_W/2-68, WIN_H/2-12,
