@@ -66,8 +66,10 @@ extern "C" {
     void wasm_press_start() {
         if (!g_game) return;
         if (g_game->state == GameState::MENU) {
+            g_game->reset();
             g_game->state = GameState::PLAYING;
             g_game->playSfx("powerup");
+            g_game->spawnWave();
         } else if (g_game->state == GameState::PLAYING) {
             g_game->state = GameState::PAUSED;
         } else if (g_game->state == GameState::PAUSED) {
@@ -86,7 +88,7 @@ extern "C" {
 Game::Game()
     : state(GameState::MENU), level(1), globalTime(0),
       comboStreak(0), comboMultiplier(1), comboTimer(0),
-      boss(nullptr), bossSpawned(false),
+      boss(nullptr), bossSpawned(false), waveSpawned(false),
       enemySpawnTimer(0), enemySpawnRate(120),
       powerupTimer(0), coinTimer(0),
       bgScroll(0), uiMessageTimer(0),
@@ -129,6 +131,7 @@ void Game::reset(){
     floatingTexts.clear();
     delete boss; boss=nullptr;
     bossSpawned=false;
+    waveSpawned=false;
     bossWarningActive=false;
     bossWarningTimer=0;
     comboStreak=0;
@@ -196,6 +199,7 @@ void Game::spawnWave(){
     int pattern = std::min(level, 3);
     if(pattern < 1) pattern = 1;
 
+    waveSpawned = true;
     for(int r=0;r<rows;r++){
         for(int c=0;c<cols;c++){
             EnemyType t;
@@ -570,7 +574,9 @@ void Game::update(){
     if(uiMessageTimer>0) uiMessageTimer--;
 
     // Boss Warning Sequence & Spawn (when wave enemies are cleared)
-    if(enemies.empty() && !bossSpawned && !bossWarningActive){
+    if(!waveSpawned && enemies.empty() && !bossSpawned && !bossWarningActive){
+        spawnWave();
+    } else if(waveSpawned && enemies.empty() && !bossSpawned && !bossWarningActive){
         triggerBossWarning();
     }
 
@@ -636,6 +642,7 @@ void Game::nextLevel(){
     level++;
     delete boss; boss=nullptr; bossSpawned=false;
     bossWarningActive=false; bossWarningTimer=0;
+    waveSpawned=false;
     enemies.clear(); coins.clear(); foods.clear(); powerups.clear(); floatingTexts.clear();
     enemySpawnRate = std::max(60, 120 - level*15);
     uiMessage = "LEVEL " + std::to_string(level) + " !";

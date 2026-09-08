@@ -2,7 +2,11 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#06080d">
     <title>Chicken Invaders — Retro Arcade Web Edition</title>
     <!-- Console filter for Emscripten legacy GL emulation notices -->
     <script>
@@ -77,12 +81,14 @@
             color: #dce4ee;
             font-family: var(--font-terminal);
             min-height: 100vh;
+            min-height: 100dvh;
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            padding: 12px 16px;
+            padding: 10px 14px;
             overflow-x: hidden;
+            touch-action: manipulation;
         }
 
         /* ── Header ── */
@@ -175,10 +181,11 @@
             flex-direction: column;
             align-items: center;
             /* Expand viewport responsively while preserving 9:7 aspect ratio */
-            width: min(95vw, calc((92vh - 125px) * (900 / 700)));
+            width: min(96vw, calc((94vh - 120px) * (900 / 700)));
             aspect-ratio: 900 / 700;
             max-width: 1280px;
             max-height: 995px;
+            transition: all 0.2s ease;
         }
 
         .cabinet-header {
@@ -1100,78 +1107,112 @@
             display: flex !important;
         }
 
-        /* Left side: 4-Way Cross D-Pad */
-        .dpad-zone {
+        /* ── Classic Vintage Arcade Joystick ── */
+        .joystick-zone {
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .dpad-cross {
             position: relative;
-            width: 124px;
-            height: 124px;
-            background: #131924;
-            border-radius: 12px;
-            box-shadow: inset 0 0 8px #000, 0 4px 12px rgba(0, 0, 0, 0.5);
-            border: 1px solid #233045;
-        }
-        .dpad-core {
-            position: absolute;
-            top: 42px;
-            left: 42px;
-            width: 40px;
-            height: 40px;
-            background: #1a2332;
-            border-radius: 50%;
-            box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.8);
-            pointer-events: none;
-        }
-        .dpad-btn {
-            position: absolute;
-            width: 40px;
-            height: 40px;
-            background: linear-gradient(180deg, #222d40 0%, #151d2b 100%);
-            border: 1px solid #364761;
-            color: var(--retro-cyan);
-            font-size: 1.15rem;
-            font-family: monospace;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            outline: none;
-            touch-action: none;
             user-select: none;
             -webkit-user-select: none;
-            transition: all 0.08s;
-            box-shadow: 0 3px 6px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
+            touch-action: none;
+            padding: 4px;
         }
-        .dpad-btn-up {
-            top: 4px;
-            left: 42px;
-            border-radius: 6px 6px 0 0;
+        .joystick-base {
+            position: relative;
+            width: 122px;
+            height: 122px;
+            border-radius: 50%;
+            background: radial-gradient(circle at center, #151a24 0%, #0d1117 65%, #05070a 100%);
+            border: 3px solid #2d3b4e;
+            box-shadow:
+                0 6px 18px rgba(0, 0, 0, 0.8),
+                inset 0 2px 6px rgba(0, 0, 0, 0.9),
+                inset 0 0 0 2px rgba(255, 255, 255, 0.06),
+                0 0 14px rgba(0, 229, 255, 0.15);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            touch-action: none;
         }
-        .dpad-btn-down {
-            bottom: 4px;
-            left: 42px;
-            border-radius: 0 0 6px 6px;
+        .joystick-base:active {
+            cursor: grabbing;
         }
-        .dpad-btn-left {
-            top: 42px;
-            left: 4px;
-            border-radius: 6px 0 0 6px;
+        .joy-dir {
+            position: absolute;
+            font-family: monospace;
+            font-size: 0.72rem;
+            color: #3b4c63;
+            pointer-events: none;
+            transition: color 0.1s, text-shadow 0.1s;
+            user-select: none;
         }
-        .dpad-btn-right {
-            top: 42px;
-            right: 4px;
-            border-radius: 0 6px 6px 0;
+        .joy-dir-u { top: 5px; left: 50%; transform: translateX(-50%); }
+        .joy-dir-d { bottom: 5px; left: 50%; transform: translateX(-50%); }
+        .joy-dir-l { left: 7px; top: 50%; transform: translateY(-50%); }
+        .joy-dir-r { right: 7px; top: 50%; transform: translateY(-50%); }
+
+        .joy-dir.active {
+            color: var(--retro-cyan) !important;
+            text-shadow: 0 0 8px rgba(0, 229, 255, 0.9), 0 0 14px var(--retro-cyan) !important;
         }
-        .dpad-btn:active, .dpad-btn.pressed {
-            background: #00e5ff !important;
-            color: #06080d !important;
-            border-color: #00ffff !important;
-            box-shadow: 0 0 14px rgba(0, 229, 255, 0.85), inset 0 2px 4px rgba(0,0,0,0.4) !important;
-            transform: scale(0.94);
+        .joystick-well {
+            position: relative;
+            width: 78px;
+            height: 78px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 45% 45%, #080b10 0%, #020305 100%);
+            box-shadow:
+                inset 0 4px 10px rgba(0, 0, 0, 0.95),
+                inset 0 -2px 4px rgba(255, 255, 255, 0.06),
+                0 0 0 1px #1e2634;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: visible;
+        }
+        .joystick-washer {
+            position: absolute;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 40% 35%, #252d3a 0%, #11151c 70%, #090c10 100%);
+            box-shadow: 0 3px 8px rgba(0,0,0,0.8), inset 0 1px 1px rgba(255,255,255,0.15);
+            border: 1px solid #2f3a4c;
+            pointer-events: none;
+            transition: transform 0.04s ease-out;
+        }
+        .joystick-ball {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: radial-gradient(circle at 35% 30%, #ff6b6b 0%, #ee1c24 38%, #a3000b 75%, #590006 100%);
+            box-shadow:
+                0 8px 16px rgba(0, 0, 0, 0.8),
+                inset 0 3px 6px rgba(255, 255, 255, 0.6),
+                inset 0 -4px 8px rgba(0, 0, 0, 0.85),
+                0 0 12px rgba(238, 28, 36, 0.45);
+            border: 1px solid rgba(255, 120, 120, 0.5);
+            cursor: pointer;
+            touch-action: none;
+            user-select: none;
+            transition: transform 0.04s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .joystick-ball-glare {
+            position: absolute;
+            top: 5px;
+            left: 9px;
+            width: 14px;
+            height: 9px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0) 100%);
+            transform: rotate(-30deg);
+            pointer-events: none;
         }
 
         /* Center: Start / Pause button */
@@ -1276,23 +1317,155 @@
             box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.6), 0 0 22px rgba(255, 59, 48, 0.95);
         }
 
-        /* ── Responsive ── */
+        /* ── Fullscreen Mode CSS ── */
+        body.fullscreen-mode,
+        :fullscreen body,
+        :-webkit-full-screen body {
+            padding: 0 !important;
+            margin: 0 !important;
+            width: 100vw !important;
+            height: 100dvh !important;
+            min-height: 100dvh !important;
+            max-height: 100dvh !important;
+            overflow: hidden !important;
+            background: #000 !important;
+            justify-content: flex-start !important;
+        }
+        body.fullscreen-mode header,
+        :fullscreen header,
+        :-webkit-full-screen header {
+            display: none !important;
+        }
+        body.fullscreen-mode .controls-card,
+        :fullscreen .controls-card,
+        :-webkit-full-screen .controls-card {
+            display: none !important;
+        }
+        body.fullscreen-mode .arcade-cabinet,
+        :fullscreen .arcade-cabinet,
+        :-webkit-full-screen .arcade-cabinet {
+            width: 100vw !important;
+            height: 100dvh !important;
+            max-width: 100vw !important;
+            max-height: 100dvh !important;
+            aspect-ratio: auto !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: env(safe-area-inset-top, 2px) env(safe-area-inset-right, 4px) env(safe-area-inset-bottom, 2px) env(safe-area-inset-left, 4px) !important;
+            box-shadow: none !important;
+        }
+        body.fullscreen-mode .canvas-container,
+        :fullscreen .canvas-container,
+        :-webkit-full-screen .canvas-container {
+            flex: 1 1 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-height: none !important;
+        }
+        body.fullscreen-mode .virtual-gamepad,
+        :fullscreen .virtual-gamepad,
+        :-webkit-full-screen .virtual-gamepad {
+            display: flex !important;
+            flex-shrink: 0 !important;
+            padding: 8px 16px !important;
+        }
+
+        /* ── Responsive Mobile Optimizations ── */
         @media (max-width: 960px) {
             h1 { font-size: 1.0rem; }
         }
-        @media (max-width: 600px) {
-            h1 { font-size: 0.75rem; letter-spacing: 1px; }
-            .controls-card { gap: 10px; padding: 6px 12px; font-size: 0.90rem; }
-            .modal-box { padding: 18px 14px; }
-            .dpad-cross { width: 110px; height: 110px; }
-            .dpad-btn { width: 36px; height: 36px; font-size: 1.0rem; }
-            .dpad-core { top: 37px; left: 37px; width: 36px; height: 36px; }
-            .dpad-btn-up { top: 3px; left: 37px; }
-            .dpad-btn-down { bottom: 3px; left: 37px; }
-            .dpad-btn-left { top: 37px; left: 3px; }
-            .dpad-btn-right { top: 37px; right: 3px; }
+        @media (max-width: 768px) {
+            body {
+                padding: env(safe-area-inset-top, 2px) env(safe-area-inset-right, 2px) env(safe-area-inset-bottom, 2px) env(safe-area-inset-left, 2px);
+                justify-content: flex-start;
+                height: 100dvh;
+                min-height: 100dvh;
+                max-height: 100dvh;
+                overflow: hidden;
+            }
+            header {
+                margin-bottom: 2px;
+                gap: 2px;
+            }
+            h1 {
+                font-size: 0.85rem;
+                letter-spacing: 1.5px;
+            }
+            p.subtitle {
+                display: none;
+            }
+            .header-actions {
+                display: none;
+            }
+            .controls-card {
+                display: none;
+            }
+            .arcade-cabinet {
+                width: 100vw;
+                max-width: 100vw;
+                flex: 1 1 0;
+                height: auto;
+                aspect-ratio: auto;
+                max-height: calc(100dvh - 36px);
+                border: none;
+                border-radius: 0;
+                padding: 4px 4px 6px 4px;
+                box-shadow: none;
+            }
+            .canvas-container {
+                flex: 1 1 0;
+                width: 100%;
+                min-height: 0;
+                max-height: calc(100dvh - 170px);
+            }
+            .virtual-gamepad {
+                display: flex !important;
+                padding: 8px 12px;
+                flex-shrink: 0;
+            }
+            .joystick-base { width: 110px; height: 110px; }
+            .joystick-well { width: 70px; height: 70px; }
+            .joystick-washer { width: 50px; height: 50px; }
+            .joystick-ball { width: 45px; height: 45px; }
             .fire-btn-rim { width: 74px; height: 74px; }
             .gamepad-pill-btn { font-size: 0.46rem; padding: 7px 12px; }
+            .modal-box { padding: 18px 14px; }
+        }
+        @media (max-height: 550px) and (orientation: landscape) {
+            body {
+                padding: 0;
+                height: 100dvh;
+                overflow: hidden;
+            }
+            header, .controls-card {
+                display: none !important;
+            }
+            .arcade-cabinet {
+                width: 100vw;
+                height: 100dvh;
+                border: none;
+                border-radius: 0;
+                padding: 2px 4px;
+            }
+            .canvas-container {
+                flex: 1 1 0;
+                width: 100%;
+                height: 100%;
+            }
+            .virtual-gamepad {
+                position: absolute;
+                inset: 0;
+                background: transparent;
+                border: none;
+                box-shadow: none;
+                pointer-events: none;
+                padding: 0 16px 8px 16px;
+                align-items: flex-end;
+                z-index: 25;
+            }
+            .joystick-zone, .fire-zone, .gamepad-mid-zone {
+                pointer-events: auto;
+            }
         }
     </style>
 </head>
@@ -1311,7 +1484,7 @@
         <div class="cabinet-header">
             <div class="cabinet-badge">ARCADE SYSTEM // 60 FPS</div>
             <div style="display: flex; align-items: center; gap: 8px;">
-                <button id="btnTouchToggle" class="cabinet-btn-audio" type="button" title="Toggle Virtual Touch Controls">📱 TOUCH</button>
+                <button id="btnFullscreenToggle" class="cabinet-btn-audio" type="button" title="Toggle Fullscreen Mode">⛶ FULLSCREEN</button>
                 <button id="btnAudioToggle" class="cabinet-btn-audio" type="button" title="Toggle Sound (M)">🔊 SFX ON</button>
                 <div class="cabinet-led">PWR</div>
             </div>
@@ -1326,14 +1499,19 @@
 
         <!-- Virtual Arcade Touch Deck -->
         <div id="virtualGamepad" class="virtual-gamepad">
-            <!-- Left: 4-Way Cross D-Pad -->
-            <div class="dpad-zone">
-                <div class="dpad-cross">
-                    <button id="btnDpadUp" class="dpad-btn dpad-btn-up" type="button" aria-label="Move Up">▲</button>
-                    <button id="btnDpadLeft" class="dpad-btn dpad-btn-left" type="button" aria-label="Move Left">◀</button>
-                    <div class="dpad-core"></div>
-                    <button id="btnDpadRight" class="dpad-btn dpad-btn-right" type="button" aria-label="Move Right">▶</button>
-                    <button id="btnDpadDown" class="dpad-btn dpad-btn-down" type="button" aria-label="Move Down">▼</button>
+            <!-- Left: Classic Retro Arcade Joystick -->
+            <div class="joystick-zone" id="joystickZone">
+                <div class="joystick-base" id="joystickBase">
+                    <span class="joy-dir joy-dir-u">▲</span>
+                    <span class="joy-dir joy-dir-d">▼</span>
+                    <span class="joy-dir joy-dir-l">◀</span>
+                    <span class="joy-dir joy-dir-r">▶</span>
+                    <div class="joystick-well">
+                        <div class="joystick-washer" id="joystickWasher"></div>
+                        <div class="joystick-ball" id="joystickBall">
+                            <div class="joystick-ball-glare"></div>
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -2495,10 +2673,6 @@
             el.addEventListener('mouseleave', handleEnd);
         }
 
-        bindTouchBtn(document.getElementById('btnDpadUp'), function(){ setMoveUp(true); }, function(){ setMoveUp(false); });
-        bindTouchBtn(document.getElementById('btnDpadDown'), function(){ setMoveDown(true); }, function(){ setMoveDown(false); });
-        bindTouchBtn(document.getElementById('btnDpadLeft'), function(){ setMoveLeft(true); }, function(){ setMoveLeft(false); });
-        bindTouchBtn(document.getElementById('btnDpadRight'), function(){ setMoveRight(true); }, function(){ setMoveRight(false); });
         bindTouchBtn(document.getElementById('btnFire'), function(){ setShooting(true); }, function(){ setShooting(false); });
 
         var btnGamepadStart = document.getElementById('btnGamepadStart');
@@ -2512,18 +2686,221 @@
             btnGamepadStart.addEventListener('click', handleStartTap);
         }
 
-        // Toggle touch gamepad visibility
-        var btnTouchToggle = document.getElementById('btnTouchToggle');
-        var virtualGamepad = document.getElementById('virtualGamepad');
-        if (btnTouchToggle && virtualGamepad) {
-            btnTouchToggle.addEventListener('click', function(e) {
+        // ================================================================
+        // RETRO ARCADE JOYSTICK CONTROLLER
+        // ================================================================
+        (function initJoystick() {
+            var zone = document.getElementById('joystickZone');
+            var base = document.getElementById('joystickBase');
+            var ball = document.getElementById('joystickBall');
+            var washer = document.getElementById('joystickWasher');
+            if (!zone || !base || !ball) return;
+
+            var dirU = base.querySelector('.joy-dir-u');
+            var dirD = base.querySelector('.joy-dir-d');
+            var dirL = base.querySelector('.joy-dir-l');
+            var dirR = base.querySelector('.joy-dir-r');
+
+            var active = false;
+            var activeTouchId = null;
+            var originX = 0;
+            var originY = 0;
+            var maxRadius = 38; // Maximum stick knob displacement (px)
+            var deadzone = 8;   // Input engagement threshold (px)
+
+            function updateStick(clientX, clientY) {
+                var dx = clientX - originX;
+                var dy = clientY - originY;
+                var dist = Math.sqrt(dx * dx + dy * dy);
+
+                if (dist > maxRadius) {
+                    dx = (dx / dist) * maxRadius;
+                    dy = (dy / dist) * maxRadius;
+                }
+
+                // Render physical knob and washer position
+                ball.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+                if (washer) {
+                    washer.style.transform = 'translate(' + (dx * 0.35) + 'px, ' + (dy * 0.35) + 'px)';
+                }
+
+                // 8-way directional determination
+                var up = dy < -deadzone;
+                var down = dy > deadzone;
+                var left = dx < -deadzone;
+                var right = dx > deadzone;
+
+                setMoveUp(up);
+                setMoveDown(down);
+                setMoveLeft(left);
+                setMoveRight(right);
+
+                // Direction indicator LEDs on base
+                if (dirU) dirU.classList.toggle('active', up);
+                if (dirD) dirD.classList.toggle('active', down);
+                if (dirL) dirL.classList.toggle('active', left);
+                if (dirR) dirR.classList.toggle('active', right);
+            }
+
+            function resetStick() {
+                active = false;
+                activeTouchId = null;
+                ball.style.transform = 'translate(0px, 0px)';
+                if (washer) washer.style.transform = 'translate(0px, 0px)';
+
+                setMoveUp(false);
+                setMoveDown(false);
+                setMoveLeft(false);
+                setMoveRight(false);
+
+                if (dirU) dirU.classList.remove('active');
+                if (dirD) dirD.classList.remove('active');
+                if (dirL) dirL.classList.remove('active');
+                if (dirR) dirR.classList.remove('active');
+            }
+
+            function getBaseCenter() {
+                var rect = base.getBoundingClientRect();
+                return {
+                    x: rect.left + rect.width / 2,
+                    y: rect.top + rect.height / 2
+                };
+            }
+
+            // Touch events (multi-touch support)
+            zone.addEventListener('touchstart', function(e) {
+                if (active) return;
+                for (var i = 0; i < e.changedTouches.length; i++) {
+                    var t = e.changedTouches[i];
+                    activeTouchId = t.identifier;
+                    active = true;
+                    var c = getBaseCenter();
+                    originX = c.x;
+                    originY = c.y;
+                    updateStick(t.clientX, t.clientY);
+                    if (navigator.vibrate) {
+                        try { navigator.vibrate(8); } catch(err) {}
+                    }
+                    e.preventDefault();
+                    e.stopPropagation();
+                    break;
+                }
+            }, { passive: false });
+
+            window.addEventListener('touchmove', function(e) {
+                if (!active || activeTouchId === null) return;
+                for (var i = 0; i < e.changedTouches.length; i++) {
+                    var t = e.changedTouches[i];
+                    if (t.identifier === activeTouchId) {
+                        updateStick(t.clientX, t.clientY);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            function handleTouchEnd(e) {
+                if (!active || activeTouchId === null) return;
+                for (var i = 0; i < e.changedTouches.length; i++) {
+                    var t = e.changedTouches[i];
+                    if (t.identifier === activeTouchId) {
+                        resetStick();
+                        e.preventDefault();
+                        e.stopPropagation();
+                        break;
+                    }
+                }
+            }
+            window.addEventListener('touchend', handleTouchEnd, { passive: false });
+            window.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+            // Mouse events for desktop/pointer testing
+            base.addEventListener('mousedown', function(e) {
+                active = true;
+                activeTouchId = 'mouse';
+                var c = getBaseCenter();
+                originX = c.x;
+                originY = c.y;
+                updateStick(e.clientX, e.clientY);
+                e.preventDefault();
                 e.stopPropagation();
-                virtualGamepad.classList.toggle('force-show');
-                var isForced = virtualGamepad.classList.contains('force-show');
-                btnTouchToggle.classList.toggle('active', isForced);
+            });
+
+            window.addEventListener('mousemove', function(e) {
+                if (active && activeTouchId === 'mouse') {
+                    updateStick(e.clientX, e.clientY);
+                    e.preventDefault();
+                }
+            });
+
+            window.addEventListener('mouseup', function(e) {
+                if (active && activeTouchId === 'mouse') {
+                    resetStick();
+                    e.preventDefault();
+                }
+            });
+        })();
+
+        // ================================================================
+        // FULLSCREEN & TOUCH CONTROLS TOGGLE
+        // ================================================================
+        var btnFullscreenToggle = document.getElementById('btnFullscreenToggle');
+        function isFullscreen() {
+            return !!(document.fullscreenElement || document.webkitFullscreenElement || document.mozFullScreenElement || document.msFullscreenElement);
+        }
+
+        function updateFullscreenBtn() {
+            var full = isFullscreen() || document.body.classList.contains('fullscreen-mode');
+            if (btnFullscreenToggle) {
+                btnFullscreenToggle.textContent = full ? '🗗 EXIT FULL' : '⛶ FULLSCREEN';
+                btnFullscreenToggle.classList.toggle('active', full);
+            }
+        }
+
+        if (btnFullscreenToggle) {
+            btnFullscreenToggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var doc = document.documentElement;
+                if (!isFullscreen()) {
+                    var req = doc.requestFullscreen || doc.webkitRequestFullscreen || doc.mozRequestFullScreen || doc.msRequestFullscreen;
+                    if (req) {
+                        req.call(doc).then(function() {
+                            document.body.classList.add('fullscreen-mode');
+                            updateFullscreenBtn();
+                        }).catch(function() {
+                            // Fallback to CSS fullscreen
+                            document.body.classList.toggle('fullscreen-mode');
+                            updateFullscreenBtn();
+                        });
+                    } else {
+                        document.body.classList.toggle('fullscreen-mode');
+                        updateFullscreenBtn();
+                    }
+                } else {
+                    var exit = document.exitFullscreen || document.webkitExitFullscreen || document.mozCancelFullScreen || document.msExitFullscreen;
+                    if (exit) {
+                        exit.call(document).catch(function(){});
+                    }
+                    document.body.classList.remove('fullscreen-mode');
+                    updateFullscreenBtn();
+                }
                 canvasElement.focus();
             });
         }
+
+        document.addEventListener('fullscreenchange', function() {
+            if (!isFullscreen()) {
+                document.body.classList.remove('fullscreen-mode');
+            }
+            updateFullscreenBtn();
+        });
+        document.addEventListener('webkitfullscreenchange', function() {
+            if (!isFullscreen()) {
+                document.body.classList.remove('fullscreen-mode');
+            }
+            updateFullscreenBtn();
+        });
     </script>
     {{{ SCRIPT }}}
 </body>

@@ -87,6 +87,7 @@ public:
 
     Boss*       boss;
     bool        bossSpawned;
+    bool        waveSpawned;
 
     // Spawn timers
     int enemySpawnTimer;
