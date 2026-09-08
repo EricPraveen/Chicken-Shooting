@@ -29,6 +29,7 @@ extern "C" {
         if (g_game) {
             g_game->state = GameState::MENU;
             g_game->reset();
+            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
         }
     }
 
@@ -70,14 +71,23 @@ extern "C" {
             g_game->state = GameState::PLAYING;
             g_game->playSfx("powerup");
             g_game->spawnWave();
+            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
         } else if (g_game->state == GameState::PLAYING) {
             g_game->state = GameState::PAUSED;
+            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(1); });
         } else if (g_game->state == GameState::PAUSED) {
             g_game->state = GameState::PLAYING;
+            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
         } else if (g_game->state == GameState::GAME_OVER || g_game->state == GameState::WIN) {
             g_game->reset();
             g_game->state = GameState::MENU;
+            EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
         }
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    int wasm_is_paused() {
+        return (g_game && g_game->state == GameState::PAUSED) ? 1 : 0;
     }
 }
 #endif
@@ -700,19 +710,44 @@ void Game::onKeyPress(unsigned char key){
                 reset();
                 playSfx("powerup");
                 spawnWave();
+#ifdef __EMSCRIPTEN__
+                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+#endif
             }
             break;
         case GameState::PLAYING:
-            if(key=='p' || key=='P') state=GameState::PAUSED;
+            if(key=='p' || key=='P') {
+                state=GameState::PAUSED;
+#ifdef __EMSCRIPTEN__
+                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(1); });
+#endif
+            }
             if(key=='b' || key=='B'){ enemies.clear(); triggerBossWarning(); }
             break;
         case GameState::PAUSED:
-            if(key=='p' || key=='P') state=GameState::PLAYING;
-            if(key=='q' || key=='Q'){ state=GameState::MENU; reset(); }
+            if(key=='p' || key=='P') {
+                state=GameState::PLAYING;
+#ifdef __EMSCRIPTEN__
+                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+#endif
+            }
+            if(key=='q' || key=='Q'){
+                state=GameState::MENU;
+                reset();
+#ifdef __EMSCRIPTEN__
+                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+#endif
+            }
             break;
         case GameState::GAME_OVER:
         case GameState::WIN:
-            if(key=='\r' || key==13){ state=GameState::MENU; reset(); }
+            if(key=='\r' || key==13){
+                state=GameState::MENU;
+                reset();
+#ifdef __EMSCRIPTEN__
+                EM_ASM({ if (window.onPauseStateChanged) window.onPauseStateChanged(0); });
+#endif
+            }
             break;
     }
 }

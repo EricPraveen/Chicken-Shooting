@@ -185,22 +185,70 @@ inline void bresenhamLine(int x1,int y1,int x2,int y2, const Color& c){
 }
 
 // =============================================================================
+// FAST UNIT-CIRCLE LOOKUP TABLES & HARDWARE ACCELERATED CIRCLE
+// =============================================================================
+namespace CircleLUT {
+    inline const std::vector<std::pair<float,float>>& getPoints(int segs) {
+        static std::vector<std::pair<float,float>> lut8, lut12, lut16, lut22;
+        static bool init = false;
+        if (!init) {
+            auto makeLut = [](int s) {
+                std::vector<std::pair<float,float>> v;
+                v.reserve(s + 1);
+                for (int i = 0; i <= s; ++i) {
+                    float a = 2.0f * PI * i / s;
+                    v.push_back({std::cos(a), std::sin(a)});
+                }
+                return v;
+            };
+            lut8 = makeLut(8);
+            lut12 = makeLut(12);
+            lut16 = makeLut(16);
+            lut22 = makeLut(22);
+            init = true;
+        }
+        if (segs <= 8) return lut8;
+        if (segs <= 12) return lut12;
+        if (segs <= 16) return lut16;
+        return lut22;
+    }
+}
+
+// Helper: draw filled circle quickly via GL triangle fan using precomputed LUT
+inline void drawCircle(float cx,float cy,float r, const Color& c, int segs=0){
+    if (r <= 0.0f) return;
+    if (segs <= 0) {
+        segs = (r <= 5.0f) ? 8 : (r <= 14.0f) ? 12 : (r <= 28.0f) ? 16 : 22;
+    }
+    const auto& pts = CircleLUT::getPoints(segs);
+    c.apply();
+    glBegin(GL_TRIANGLE_FAN);
+        glVertex2f(cx,cy);
+        for (const auto& pt : pts) {
+            glVertex2f(cx + r * pt.first, cy + r * pt.second);
+        }
+    glEnd();
+}
+
+// =============================================================================
 // MIDPOINT CIRCLE ALGORITHM (CG Concept 4)
-// Exploits 8-fold symmetry; uses integer decision parameter p.
-// Used for: shield bubble, coin outlines, boss aura.
 // =============================================================================
 inline void midpointCircle(int cx,int cy,int r, const Color& c, bool fill=false){
-    c.apply();
+    if (r <= 0) return;
     if(fill){
-        glBegin(GL_LINES);
-        for(int y=-r;y<=r;y++){
-            int xSpan=(int)std::sqrt((float)(r*r - y*y));
-            glVertex2i(cx - xSpan, cy + y);
-            glVertex2i(cx + xSpan + 1, cy + y);
-        }
-        glEnd();
+        drawCircle((float)cx, (float)cy, (float)r, c);
         return;
     }
+#ifdef __EMSCRIPTEN__
+    const auto& pts = CircleLUT::getPoints((r <= 6) ? 8 : 16);
+    c.apply();
+    glBegin(GL_LINE_LOOP);
+    for(const auto& pt : pts){
+        glVertex2f(cx + r * pt.first, cy + r * pt.second);
+    }
+    glEnd();
+#else
+    c.apply();
     int x=0, y=r;
     int p=1-r;
     glBegin(GL_POINTS);
@@ -218,34 +266,19 @@ inline void midpointCircle(int cx,int cy,int r, const Color& c, bool fill=false)
         plot8(x,y);
     }
     glEnd();
+#endif
 }
 
 // =============================================================================
-// SCAN-LINE FILL ALGORITHM (CG Concept 5)
-// Given a convex polygon as vertex list, fill it row by row.
-// Used for: enemy chicken body, food items, power-up shapes.
+// POLYGON FILL (CG Concept 5)
+// Fast polygon rasterization using hardware GL_TRIANGLE_FAN
 // =============================================================================
 inline void scanlineFill(const std::vector<Vec2>& verts, const Color& c){
     if(verts.size()<3) return;
-    float yMin= verts[0].y, yMax=verts[0].y;
-    for(auto& v:verts){ yMin=std::min(yMin,v.y); yMax=std::max(yMax,v.y); }
-    int n=(int)verts.size();
     c.apply();
-    glBegin(GL_LINES);
-    for(int y=(int)yMin; y<=(int)yMax; y++){
-        std::vector<float> xs;
-        for(int i=0;i<n;i++){
-            Vec2 a=verts[i], b=verts[(i+1)%n];
-            if((a.y<=y && b.y>y)||(b.y<=y && a.y>y)){
-                float t=(y-a.y)/(b.y-a.y);
-                xs.push_back(a.x + t*(b.x-a.x));
-            }
-        }
-        std::sort(xs.begin(),xs.end());
-        for(int i=0;i+1<(int)xs.size();i+=2){
-            glVertex2i((int)xs[i], y);
-            glVertex2i((int)xs[i+1] + 1, y);
-        }
+    glBegin(GL_TRIANGLE_FAN);
+    for(const auto& v : verts){
+        glVertex2f(v.x, v.y);
     }
     glEnd();
 }
@@ -309,49 +342,7 @@ inline void drawRectOutline(float x,float y,float w,float h, const Color& c, flo
     glLineWidth(1.0f);
 }
 
-// Fast unit-circle lookup tables for high-performance WebGL rendering
-namespace CircleLUT {
-    inline const std::vector<std::pair<float,float>>& getPoints(int segs) {
-        static std::vector<std::pair<float,float>> lut8, lut12, lut16, lut22;
-        static bool init = false;
-        if (!init) {
-            auto makeLut = [](int s) {
-                std::vector<std::pair<float,float>> v;
-                v.reserve(s + 1);
-                for (int i = 0; i <= s; ++i) {
-                    float a = 2.0f * PI * i / s;
-                    v.push_back({std::cos(a), std::sin(a)});
-                }
-                return v;
-            };
-            lut8 = makeLut(8);
-            lut12 = makeLut(12);
-            lut16 = makeLut(16);
-            lut22 = makeLut(22);
-            init = true;
-        }
-        if (segs <= 8) return lut8;
-        if (segs <= 12) return lut12;
-        if (segs <= 16) return lut16;
-        return lut22;
-    }
-}
 
-// Helper: draw filled circle quickly via GL triangle fan using precomputed LUT
-inline void drawCircle(float cx,float cy,float r, const Color& c, int segs=0){
-    if (r <= 0.0f) return;
-    if (segs <= 0) {
-        segs = (r <= 5.0f) ? 8 : (r <= 14.0f) ? 12 : (r <= 28.0f) ? 16 : 22;
-    }
-    const auto& pts = CircleLUT::getPoints(segs);
-    c.apply();
-    glBegin(GL_TRIANGLE_FAN);
-        glVertex2f(cx,cy);
-        for (const auto& pt : pts) {
-            glVertex2f(cx + r * pt.first, cy + r * pt.second);
-        }
-    glEnd();
-}
 
 // Helper: draw circle outline via midpoint algorithm (CG concept demo)
 inline void drawCircleOutline(float cx,float cy,float r, const Color& c){
