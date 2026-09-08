@@ -34,7 +34,7 @@ EMCC_FLAGS  = -std=c++17 -O3 \
               -I$(SRCDIR) \
               -s LEGACY_GL_EMULATION=1 \
               -s GL_UNSAFE_OPTS=0 \
-              -s EXPORTED_FUNCTIONS="['_main','_wasm_restart_game','_wasm_get_score']" \
+              -s EXPORTED_FUNCTIONS="['_main','_wasm_restart_game','_wasm_get_score','_wasm_set_move_up','_wasm_set_move_down','_wasm_set_move_left','_wasm_set_move_right','_wasm_set_shooting','_wasm_press_start']" \
               -s EXPORTED_RUNTIME_METHODS="['ccall','cwrap']" \
               --shell-file $(SHELL_FILE)
 

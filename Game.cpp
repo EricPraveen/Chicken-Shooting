@@ -36,6 +36,47 @@ extern "C" {
     int wasm_get_score() {
         return g_game ? g_game->player.score : 0;
     }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_move_up(int active) {
+        if (g_game) g_game->player.moveUp = (active != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_move_down(int active) {
+        if (g_game) g_game->player.moveDown = (active != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_move_left(int active) {
+        if (g_game) g_game->player.moveLeft = (active != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_move_right(int active) {
+        if (g_game) g_game->player.moveRight = (active != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_shooting(int active) {
+        if (g_game) g_game->player.isShooting = (active != 0);
+    }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_press_start() {
+        if (!g_game) return;
+        if (g_game->state == GameState::MENU) {
+            g_game->state = GameState::PLAYING;
+            g_game->playSfx("powerup");
+        } else if (g_game->state == GameState::PLAYING) {
+            g_game->state = GameState::PAUSED;
+        } else if (g_game->state == GameState::PAUSED) {
+            g_game->state = GameState::PLAYING;
+        } else if (g_game->state == GameState::GAME_OVER || g_game->state == GameState::WIN) {
+            g_game->reset();
+            g_game->state = GameState::MENU;
+        }
+    }
 }
 #endif
 
