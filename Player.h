@@ -45,6 +45,7 @@ struct Player {
     std::vector<Bullet> bullets;
 
     bool moveLeft, moveRight, moveUp, moveDown;
+    bool isShooting;
 
     Player(float startX=WIN_W/2.0f, float startY=80.0f)
         : x(startX), y(startY), speed(5.0f),
@@ -53,9 +54,10 @@ struct Player {
           shieldActive(false), shieldTimer(0),
           strongBulletActive(false), strongBulletTimer(0),
           fireRateActive(false), fireRateTimer(0),
-          shootCooldown(8), shootTimer(0),
+          shootCooldown(8), shootTimer(8),
           engineFlicker(0), engineAccel(0),
-          moveLeft(false), moveRight(false), moveUp(false), moveDown(false)
+          moveLeft(false), moveRight(false), moveUp(false), moveDown(false),
+          isShooting(false)
     {}
 
     void activateShield(int dur=600)       { shieldActive=true; shieldTimer=dur; }
@@ -82,16 +84,21 @@ struct Player {
         if(strongBulletActive && --strongBulletTimer<=0) { strongBulletActive=false; }
         if(fireRateActive     && --fireRateTimer<=0)     { fireRateActive=false; shootCooldown=8; }
 
-        // Continuous auto-shoot
-        if(++shootTimer >= shootCooldown){
-            shootTimer = 0;
-            bool s = strongBulletActive;
-            if(s){
-                bullets.emplace_back(x-6, y+30, true);
-                bullets.emplace_back(x+6, y+30, true);
-            } else {
-                bullets.emplace_back(x, y+30);
+        // Controlled shooting: ONLY fires when Spacebar is held down
+        if(isShooting){
+            if(++shootTimer >= shootCooldown){
+                shootTimer = 0;
+                bool s = strongBulletActive;
+                if(s){
+                    bullets.emplace_back(x-6, y+30, true);
+                    bullets.emplace_back(x+6, y+30, true);
+                } else {
+                    bullets.emplace_back(x, y+30);
+                }
             }
+        } else {
+            // Ready to fire immediately on next press
+            shootTimer = shootCooldown;
         }
 
         for(auto& b : bullets) b.update();
@@ -220,19 +227,46 @@ struct Player {
         float t = engineFlicker;
 
         // CG Concept 4: Midpoint Circle Algorithm — shield bubble
-        float pulse = 0.22f + 0.14f*std::sin(t * 2.8f);
-        midpointCircle((int)x,(int)y, 42, Color(0.2f,0.6f,1.0f,pulse), true);
-        midpointCircle((int)x,(int)y, 42, Color(0.5f,0.87f,1.0f), false);
-        midpointCircle((int)x,(int)y, 40, Color(0.7f,0.95f,1.0f,0.18f), false);
+        float pulse = 0.20f + 0.12f * std::sin(t * 3.5f);
+        float r     = 42.0f + 1.6f * std::sin(t * 2.8f);
 
-        // CG Concept 8: Rotation — 4 arc highlights orbit the shield ring
-        float arcAngle = t * 3.2f;
-        for(int i=0;i<4;i++){
-            float a = arcAngle + i*(PI/2.0f);
-            float x1=x+41*std::cos(a),      y1=y+41*std::sin(a);
-            float x2=x+41*std::cos(a+0.45f),y2=y+41*std::sin(a+0.45f);
-            ddaLine((int)x1,(int)y1,(int)x2,(int)y2, Color(1,1,1,0.75f));
+        // 1. Soft inner energy plasma fill
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        midpointCircle((int)x, (int)y, (int)r, Color(0.12f, 0.65f, 1.0f, pulse), true);
+        midpointCircle((int)x, (int)y, (int)(r - 5), Color(0.35f, 0.85f, 1.0f, pulse * 0.7f), true);
+
+        // 2. Hexagonal energy grid lattice (CG Concept 2: DDA Line)
+        float hexRot = -t * 0.6f;
+        int sides = 6;
+        for(int i = 0; i < sides; i++){
+            float a1 = hexRot + i * (2.0f * PI / sides);
+            float a2 = hexRot + (i + 1) * (2.0f * PI / sides);
+            float px1 = x + (r - 6) * std::cos(a1), py1 = y + (r - 6) * std::sin(a1);
+            float px2 = x + (r - 6) * std::cos(a2), py2 = y + (r - 6) * std::sin(a2);
+            ddaLine((int)px1, (int)py1, (int)px2, (int)py2, Color(0.55f, 0.90f, 1.0f, 0.45f));
+            ddaLine((int)x, (int)y, (int)px1, (int)py1, Color(0.35f, 0.75f, 1.0f, 0.20f));
         }
+
+        // 3. Crisp outer energy perimeter & refraction rings
+        midpointCircle((int)x, (int)y, (int)r, Color(0.40f, 0.92f, 1.0f, 0.95f), false);
+        midpointCircle((int)x, (int)y, (int)(r - 1), Color(0.70f, 0.98f, 1.0f, 0.70f), false);
+
+        // 4. CG Concept 8: 4 Orbiting Aegis Energy Nodes
+        float arcAngle = t * 2.6f;
+        for(int i = 0; i < 4; i++){
+            float a = arcAngle + i * (PI / 2.0f);
+            float ox = x + r * std::cos(a);
+            float oy = y + r * std::sin(a);
+
+            drawCircle(ox, oy, 3.5f, Color(0.20f, 0.85f, 1.0f, 0.90f));
+            midpointCircle((int)ox, (int)oy, 2, Color(1.0f, 1.0f, 1.0f), true);
+
+            float a2 = a + 0.38f;
+            float ax2 = x + r * std::cos(a2);
+            float ay2 = y + r * std::sin(a2);
+            ddaLine((int)ox, (int)oy, (int)ax2, (int)ay2, Color(0.85f, 0.98f, 1.0f, 0.80f));
+        }
+        glDisable(GL_BLEND);
     }
 
     void draw() const {

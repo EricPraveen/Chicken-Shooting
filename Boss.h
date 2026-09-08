@@ -266,56 +266,252 @@ struct Boss {
         glTranslatef(x, y, 0);
         glScalef(scale, scale, 1);
 
-        // Aura — Midpoint Circle (CG Concept 4)
-        float auraA = 0.15f + 0.1f*std::sin(animTime*3);
-        Color auraCol = (phase==2) ? Color(1,0.2f,0,auraA) : Color(0.5f,0,1,auraA);
-        midpointCircle(0,0,72, auraCol, true);
-        midpointCircle(0,0,65, Color(auraCol.r,auraCol.g,auraCol.b,auraA*1.5f), false);
+        // ── Dynamic Flight Animation Variables (CG Concept 8: Rotation) ─────
+        float flapFreq  = (phase == 2) ? 5.4f : 3.8f;
+        float flapAngle = (phase == 2 ? 26.0f : 20.0f) * std::sin(animTime * flapFreq);
+        float flightBob = 4.2f * std::sin(animTime * flapFreq);
+        float bankTilt  = 4.0f * std::sin(animTime * 1.8f);
+        float tailSway  = 6.0f * std::sin(animTime * 2.4f);
+        float combSway  = 2.2f * std::sin(animTime * flapFreq);
+        float wattleSway= 3.5f * std::sin(animTime * flapFreq - 0.6f);
 
-        // Body polygon — Scan-Line Fill (CG Concept 5)
-        std::vector<Vec2> body;
-        for(int i=0;i<12;i++){
-            float a  = 2*PI*i/12;
-            float rx = 55*(0.9f+0.1f*std::sin(a*3));
-            float ry = 50*(0.9f+0.1f*std::cos(a*2));
-            body.push_back({rx*std::cos(a), ry*std::sin(a)});
+        // Banking tilt rotation
+        glRotatef(bankTilt, 0, 0, 1);
+
+        // ── Boss Dreadnought Palette ────────────────────────────────────────
+        // Phase 1: Imperial Dreadnought Violet / Obsidian
+        // Phase 2: Enraged Hellfire Crimson / Volcanic Ember
+        bool p2 = (phase == 2);
+        Color colBase       = p2 ? Color(0.72f, 0.12f, 0.10f) : Color(0.38f, 0.14f, 0.58f);
+        Color colShadow     = p2 ? Color(0.36f, 0.05f, 0.05f) : Color(0.22f, 0.07f, 0.36f);
+        Color colHighlight  = p2 ? Color(0.96f, 0.36f, 0.14f) : Color(0.56f, 0.28f, 0.82f);
+        Color colChest      = p2 ? Color(0.86f, 0.22f, 0.08f) : Color(0.46f, 0.20f, 0.70f);
+        Color colCore       = p2 ? Color(1.00f, 0.88f, 0.20f) : Color(0.12f, 0.88f, 0.96f);
+        Color colComb       = p2 ? Color(1.00f, 0.22f, 0.05f) : Color(0.85f, 0.12f, 0.35f);
+        Color colCombDark   = p2 ? Color(0.65f, 0.08f, 0.02f) : Color(0.52f, 0.06f, 0.20f);
+        Color colCombHigh   = p2 ? Color(1.00f, 0.55f, 0.15f) : Color(1.00f, 0.35f, 0.55f);
+        Color colBeak       = p2 ? Color(1.00f, 0.70f, 0.15f) : Color(0.96f, 0.64f, 0.12f);
+        Color colBeakDark   = p2 ? Color(0.75f, 0.35f, 0.05f) : Color(0.65f, 0.36f, 0.06f);
+        Color colClaw       = Color(0.28f, 0.30f, 0.36f);
+        Color colEyeIris    = p2 ? Color(1.00f, 0.90f, 0.20f) : Color(0.10f, 0.92f, 1.00f);
+
+        float by = flightBob;
+
+        // ── 0. Plasma Energy Aura (CG Concept 4: Midpoint Circle) ───────────
+        float auraPulse = 0.18f + 0.10f * std::sin(animTime * 3.5f);
+        Color auraCol   = p2 ? Color(1.0f, 0.22f, 0.02f, auraPulse) : Color(0.48f, 0.08f, 0.92f, auraPulse);
+        glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        midpointCircle(0, (int)by, 76, auraCol, true);
+        midpointCircle(0, (int)by, 68, Color(auraCol.r, auraCol.g, auraCol.b, auraPulse * 1.6f), false);
+        if(p2){
+            midpointCircle(0, (int)by, 84, Color(1.0f, 0.45f, 0.0f, auraPulse * 0.7f), false);
         }
-        Color bossCol = (phase==2)?Color(0.7f,0.1f,0.1f):Color(0.4f,0,0.6f);
-        scanlineFill(body, bossCol);
+        glDisable(GL_BLEND);
 
-        // Crown spikes
-        for(int i=-2;i<=2;i++){
-            float sx=i*18.0f;
-            std::vector<Vec2> spike={{sx-8,35},{sx+8,35},{sx,50+std::abs(i)*5.0f}};
-            scanlineFill(spike, Color(1,0.8f,0));
-        }
+        // ── 1. Aerodynamic Tail Sickle Plumes ───────────────────────────────
+        std::vector<Vec2> tailL = {
+            {-6.0f, by - 22.0f},
+            {-28.0f + tailSway, by - 52.0f},
+            {-16.0f + tailSway * 0.7f, by - 58.0f},
+            {-2.0f, by - 30.0f}
+        };
+        scanlineFill(tailL, colShadow);
+        ddaLine((int)-6, (int)(by - 22), (int)(-24 + tailSway), (int)(by - 54), colHighlight);
 
-        // Eyes (CG Concept 4)
-        Color eyeCol=(phase==2)?Color(1,0.1f,0.1f):Color(0.2f,0.9f,1.0f);
-        midpointCircle(-18,12,12,eyeCol,true); midpointCircle(18,12,12,eyeCol,true);
-        midpointCircle(-18,12, 6,Color(1,1,1),true); midpointCircle(18,12,6,Color(1,1,1),true);
-        midpointCircle(-16,14, 3,Color(0,0,0),true); midpointCircle(20,14,3,Color(0,0,0),true);
+        std::vector<Vec2> tailR = {
+            {6.0f, by - 22.0f},
+            {28.0f - tailSway, by - 52.0f},
+            {16.0f - tailSway * 0.7f, by - 58.0f},
+            {2.0f, by - 30.0f}
+        };
+        scanlineFill(tailR, colShadow);
+        ddaLine((int)6, (int)(by - 22), (int)(24 - tailSway), (int)(by - 54), colHighlight);
 
-        // Beak
-        std::vector<Vec2> beak={{-12,-5},{12,-5},{0,-22}};
-        scanlineFill(beak, Color(1,0.6f,0));
-        drawRectOutline(-30,-30,60,25, Color(0.8f,0.7f,0.9f),2.5f);
-        ddaLine(-30,-18,30,-18, Color(0.7f,0.6f,0.8f));
+        std::vector<Vec2> tailC = {
+            {-7.0f, by - 24.0f},
+            {tailSway * 0.5f, by - 62.0f},
+            {7.0f, by - 24.0f}
+        };
+        scanlineFill(tailC, colBase);
+        ddaLine((int)0, (int)(by - 24), (int)(tailSway * 0.5f), (int)(by - 60), colHighlight);
 
-        // Wings (CG Concept 8: Rotation)
-        glPushMatrix(); glTranslatef(-55,0,0);
-        glRotatef(20*std::sin(animTime*3),0,0,1);
-        std::vector<Vec2> lw={{0,0},{-45,-10},{-50,25},{-20,40},{0,30}};
-        scanlineFill(lw,(phase==2)?Color(0.6f,0,0):Color(0.35f,0,0.55f));
+        // ── 2. Tucked Flight Claws / Armored Talons ──────────────────────────
+        std::vector<Vec2> legL = {{-25.0f, by - 20.0f}, {-17.0f, by - 20.0f}, {-16.0f, by - 30.0f}, {-26.0f, by - 30.0f}};
+        scanlineFill(legL, colShadow);
+        ddaLine((int)-25, (int)(by - 30), (int)-31, (int)(by - 40), colClaw);
+        ddaLine((int)-21, (int)(by - 30), (int)-21, (int)(by - 42), colClaw);
+        ddaLine((int)-17, (int)(by - 30), (int)-12, (int)(by - 39), colClaw);
+
+        std::vector<Vec2> legR = {{17.0f, by - 20.0f}, {25.0f, by - 20.0f}, {26.0f, by - 30.0f}, {16.0f, by - 30.0f}};
+        scanlineFill(legR, colShadow);
+        ddaLine((int)17, (int)(by - 30), (int)12, (int)(by - 39), colClaw);
+        ddaLine((int)21, (int)(by - 30), (int)21, (int)(by - 42), colClaw);
+        ddaLine((int)25, (int)(by - 30), (int)31, (int)(by - 40), colClaw);
+
+        // ── 3. Colossal Articulated Wings (CG Concept 8: Rotation) ───────────
+        // Left Wing
+        glPushMatrix();
+        glTranslatef(-36.0f, by + 6.0f, 0.0f);
+        glRotatef(-flapAngle, 0.0f, 0.0f, 1.0f);
+        std::vector<Vec2> lwPrim = {
+            {0.0f, -6.0f}, {-20.0f, -18.0f}, {-46.0f, -6.0f},
+            {-56.0f, 14.0f}, {-40.0f, 30.0f}, {-16.0f, 26.0f}, {0.0f, 14.0f}
+        };
+        scanlineFill(lwPrim, colShadow);
+        std::vector<Vec2> lwSec = {
+            {0.0f, -4.0f}, {-16.0f, -14.0f}, {-38.0f, -2.0f},
+            {-46.0f, 14.0f}, {-32.0f, 24.0f}, {-12.0f, 20.0f}, {0.0f, 10.0f}
+        };
+        scanlineFill(lwSec, colBase);
+        std::vector<Vec2> lwCov = {
+            {0.0f, -2.0f}, {-12.0f, -8.0f}, {-26.0f, 2.0f},
+            {-22.0f, 14.0f}, {0.0f, 8.0f}
+        };
+        scanlineFill(lwCov, colHighlight);
+        ddaLine(-16, -14, -38, -2, colShadow);
+        ddaLine(-12, 5, -42, 14, colShadow);
+        midpointCircle(-48, 14, 3, colCore, true);
         glPopMatrix();
 
-        glPushMatrix(); glTranslatef(55,0,0);
-        glRotatef(-20*std::sin(animTime*3),0,0,1);
-        std::vector<Vec2> rw={{0,0},{45,-10},{50,25},{20,40},{0,30}};
-        scanlineFill(rw,(phase==2)?Color(0.6f,0,0):Color(0.35f,0,0.55f));
+        // Right Wing (mirrored)
+        glPushMatrix();
+        glTranslatef(36.0f, by + 6.0f, 0.0f);
+        glRotatef(flapAngle, 0.0f, 0.0f, 1.0f);
+        std::vector<Vec2> rwPrim = {
+            {0.0f, -6.0f}, {20.0f, -18.0f}, {46.0f, -6.0f},
+            {56.0f, 14.0f}, {40.0f, 30.0f}, {16.0f, 26.0f}, {0.0f, 14.0f}
+        };
+        scanlineFill(rwPrim, colShadow);
+        std::vector<Vec2> rwSec = {
+            {0.0f, -4.0f}, {16.0f, -14.0f}, {38.0f, -2.0f},
+            {48.0f, 14.0f}, {32.0f, 24.0f}, {12.0f, 20.0f}, {0.0f, 10.0f}
+        };
+        scanlineFill(rwSec, colBase);
+        std::vector<Vec2> rwCov = {
+            {0.0f, -2.0f}, {12.0f, -8.0f}, {26.0f, 2.0f},
+            {22.0f, 14.0f}, {0.0f, 8.0f}
+        };
+        scanlineFill(rwCov, colHighlight);
+        ddaLine(16, -14, 38, -2, colShadow);
+        ddaLine(12, 5, 42, 14, colShadow);
+        midpointCircle(48, 14, 3, colCore, true);
         glPopMatrix();
 
-        if(hitFlash>0) drawRect(-55,-45,110,95,Color(1,0,0,0.3f));
+        // ── 4. Main Torso Carapace (CG Concept 5: Scan-Line Fill) ───────────
+        std::vector<Vec2> torso = {
+            {0.0f, by + 20.0f},
+            {-18.0f, by + 16.0f},
+            {-36.0f, by + 8.0f},
+            {-45.0f, by - 8.0f},
+            {-38.0f, by - 24.0f},
+            {-20.0f, by - 35.0f},
+            {0.0f, by - 38.0f},
+            {20.0f, by - 35.0f},
+            {38.0f, by - 24.0f},
+            {45.0f, by - 8.0f},
+            {36.0f, by + 8.0f},
+            {18.0f, by + 16.0f}
+        };
+        scanlineFill(torso, colBase);
+
+        // Lower body underbelly shadow for 3D depth
+        std::vector<Vec2> torsoUnder = {
+            {-38.0f, by - 24.0f}, {-20.0f, by - 35.0f}, {0.0f, by - 38.0f},
+            {20.0f, by - 35.0f}, {38.0f, by - 24.0f}, {25.0f, by - 16.0f},
+            {0.0f, by - 22.0f}, {-25.0f, by - 16.0f}
+        };
+        scanlineFill(torsoUnder, colShadow);
+
+        // ── 5. Scalloped Breastplate Armor & Reactor Core ────────────────────
+        std::vector<Vec2> chest1 = {
+            {-24.0f, by + 12.0f}, {24.0f, by + 12.0f},
+            {28.0f, by - 2.0f}, {0.0f, by - 10.0f}, {-28.0f, by - 2.0f}
+        };
+        scanlineFill(chest1, colChest);
+
+        std::vector<Vec2> chest2 = {
+            {-18.0f, by + 4.0f}, {18.0f, by + 4.0f},
+            {20.0f, by - 12.0f}, {0.0f, by - 18.0f}, {-20.0f, by - 12.0f}
+        };
+        scanlineFill(chest2, colHighlight);
+
+        // Central Power Reactor Core (where laser beams emanate from)
+        midpointCircle(0, (int)(by - 6), 9, colShadow, true);
+        midpointCircle(0, (int)(by - 6), 7, colCore, true);
+        midpointCircle(0, (int)(by - 6), 4, Color(1, 1, 1), true);
+
+        // ── 6. Feathered Neck Ruff / Gorget ──────────────────────────────────
+        std::vector<Vec2> neck = {
+            {-20.0f, by + 14.0f}, {20.0f, by + 14.0f},
+            {15.0f, by + 26.0f}, {-15.0f, by + 26.0f}
+        };
+        scanlineFill(neck, colHighlight);
+
+        // ── 7. Massive Head Profile ──────────────────────────────────────────
+        float hy = by + 28.0f;
+        drawCircle(0.0f, hy, 18.0f, colBase);
+        drawCircle(0.0f, hy + 4.0f, 12.0f, colHighlight);
+
+        // Cheek feather tufts
+        std::vector<Vec2> cheekL = {{-14.0f, hy - 4.0f}, {-25.0f, hy + 2.0f}, {-14.0f, hy + 8.0f}};
+        scanlineFill(cheekL, colShadow);
+        std::vector<Vec2> cheekR = {{14.0f, hy - 4.0f}, {25.0f, hy + 2.0f}, {14.0f, hy + 8.0f}};
+        scanlineFill(cheekR, colShadow);
+
+        // ── 8. Majestic Rooster Comb / Crown (Organic 5-lobe crest) ──────────
+        std::vector<Vec2> crestBase = {
+            {-17.0f, hy + 10.0f}, {17.0f, hy + 10.0f},
+            {13.0f, hy + 18.0f}, {-13.0f, hy + 18.0f}
+        };
+        scanlineFill(crestBase, colComb);
+
+        drawCircle(-16.0f, hy + 14.0f + combSway * 0.5f, 5.0f, colCombDark);
+        drawCircle(-9.0f, hy + 18.0f + combSway * 0.8f, 6.2f, colComb);
+        drawCircle(0.0f, hy + 21.0f + combSway, 7.8f, colComb);
+        midpointCircle(0, (int)(hy + 21.0f + combSway), 5, colCombHigh, true);
+        drawCircle(9.0f, hy + 18.0f + combSway * 0.8f, 6.2f, colComb);
+        drawCircle(16.0f, hy + 14.0f + combSway * 0.5f, 5.0f, colCombDark);
+
+        // ── 9. Menacing Arcade Boss Visor & Eyes ─────────────────────────────
+        ddaLine((int)-22, (int)(hy + 10), (int)-7, (int)(hy + 5), colShadow);
+        ddaLine((int)22, (int)(hy + 10), (int)7, (int)(hy + 5), colShadow);
+
+        drawCircle(-13.0f, hy + 4.0f, 6.0f, Color(0.08f, 0.08f, 0.10f));
+        midpointCircle(-13, (int)(hy + 4.0f), 5, colEyeIris, true);
+        midpointCircle(-13, (int)(hy + 4.0f), 2, Color(0.02f, 0.02f, 0.02f), true);
+        midpointCircle(-12, (int)(hy + 6.0f), 1, Color(1.0f, 1.0f, 1.0f), true);
+
+        drawCircle(13.0f, hy + 4.0f, 6.0f, Color(0.08f, 0.08f, 0.10f));
+        midpointCircle(13, (int)(hy + 4.0f), 5, colEyeIris, true);
+        midpointCircle(13, (int)(hy + 4.0f), 2, Color(0.02f, 0.02f, 0.02f), true);
+        midpointCircle(14, (int)(hy + 6.0f), 1, Color(1.0f, 1.0f, 1.0f), true);
+
+        // ── 10. Sculpted Raptor Beak & Chin Wattles ──────────────────────────
+        drawCircle(-5.0f + wattleSway, hy - 9.0f, 4.2f, colComb);
+        drawCircle(5.0f + wattleSway, hy - 9.0f, 4.2f, colComb);
+
+        std::vector<Vec2> beakUp = {
+            {-10.0f, hy + 2.0f}, {10.0f, hy + 2.0f},
+            {7.0f, hy - 7.0f}, {0.0f, hy - 16.0f}, {-7.0f, hy - 7.0f}
+        };
+        scanlineFill(beakUp, colBeak);
+
+        std::vector<Vec2> beakLo = {
+            {-6.0f, hy - 6.0f}, {6.0f, hy - 6.0f}, {0.0f, hy - 16.0f}
+        };
+        scanlineFill(beakLo, colBeakDark);
+
+        ddaLine((int)-10, (int)(hy + 2), (int)0, (int)(hy - 16), colBeakDark);
+        ddaLine((int)10, (int)(hy + 2), (int)0, (int)(hy - 16), colBeakDark);
+        ddaLine((int)-4, (int)(hy), (int)-2, (int)(hy - 1), Color(0.2f, 0.1f, 0.0f));
+        ddaLine((int)4, (int)(hy), (int)2, (int)(hy - 1), Color(0.2f, 0.1f, 0.0f));
+
+        // ── 11. Hit Flash: Pure white silhouette overlay (NO red box) ────────
+        if(hitFlash > 0){
+            glEnable(GL_BLEND); glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+            drawCircle(0.0f, by + 6.0f, 54.0f, Color(1.0f, 1.0f, 1.0f, 0.40f));
+            glDisable(GL_BLEND);
+        }
 
         glPopMatrix();
     }
