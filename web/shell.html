@@ -4,6 +4,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Chicken Invaders — Retro Arcade Web Edition</title>
+    <!-- Supabase JS Client v2 CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <!-- Project Supabase Config -->
+    <script src="supabase-config.js"></script>
     <style>
         * {
             box-sizing: border-box;
@@ -24,28 +28,59 @@
         }
         header {
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
         }
         h1 {
-            font-size: 2rem;
-            background: linear-gradient(135deg, #fbbf24, #f87171, #c084fc);
+            font-size: 2.1rem;
+            background: linear-gradient(135deg, #fbbf24 0%, #f87171 50%, #c084fc 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
             text-transform: uppercase;
+            text-shadow: 0 0 35px rgba(248, 113, 113, 0.3);
         }
         p.subtitle {
             color: #94a3b8;
             font-size: 0.95rem;
-            margin-top: 4px;
         }
+        .header-actions {
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+        }
+        .btn-trophy {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.2), rgba(249, 115, 22, 0.2));
+            color: #fef08a;
+            border: 1px solid rgba(234, 179, 8, 0.4);
+            padding: 7px 18px;
+            border-radius: 9999px;
+            font-size: 0.88rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+            box-shadow: 0 0 15px rgba(234, 179, 8, 0.15);
+        }
+        .btn-trophy:hover {
+            background: linear-gradient(135deg, rgba(234, 179, 8, 0.35), rgba(249, 115, 22, 0.35));
+            transform: translateY(-1px);
+            box-shadow: 0 0 20px rgba(234, 179, 8, 0.3);
+            border-color: #facc15;
+        }
+
         .canvas-container {
             position: relative;
             background: #000;
-            border-radius: 12px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 30px rgba(99, 102, 241, 0.2);
-            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 14px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.25);
+            border: 2px solid rgba(255, 255, 255, 0.12);
             overflow: hidden;
             display: flex;
             justify-content: center;
@@ -64,18 +99,19 @@
             display: block;
         }
         .controls-card {
-            margin-top: 18px;
+            margin-top: 16px;
             background: rgba(30, 41, 59, 0.7);
-            backdrop-filter: blur(8px);
+            backdrop-filter: blur(10px);
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 10px;
-            padding: 12px 24px;
+            border-radius: 12px;
+            padding: 10px 24px;
             display: flex;
-            gap: 24px;
+            gap: 22px;
             flex-wrap: wrap;
             justify-content: center;
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: #cbd5e1;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
         }
         .controls-card span {
             display: inline-flex;
@@ -113,12 +149,340 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+
+        /* Modals & Overlays */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(4, 7, 15, 0.82);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            animation: fadeIn 0.25s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-box {
+            background: linear-gradient(160deg, #131c31 0%, #0c111e 100%);
+            border: 1px solid rgba(255, 255, 255, 0.14);
+            border-radius: 18px;
+            padding: 28px 32px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 40px rgba(99, 102, 241, 0.25);
+            text-align: center;
+            position: relative;
+            animation: popUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes popUp {
+            from { transform: scale(0.92) translateY(12px); opacity: 0; }
+            to { transform: scale(1) translateY(0); opacity: 1; }
+        }
+
+        .modal-box.leaderboard-box {
+            max-width: 620px;
+            padding: 24px 28px;
+        }
+
+        .modal-close-btn {
+            position: absolute;
+            top: 16px;
+            right: 18px;
+            background: rgba(255, 255, 255, 0.08);
+            border: none;
+            color: #94a3b8;
+            font-size: 1.3rem;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        .modal-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            color: #fff;
+        }
+
+        .modal-tag {
+            display: inline-block;
+            font-size: 0.75rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            margin-bottom: 8px;
+        }
+        .tag-gameover {
+            background: rgba(239, 68, 68, 0.2);
+            color: #fca5a5;
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+        .tag-win {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+            border: 1px solid rgba(34, 197, 94, 0.4);
+        }
+
+        .modal-title {
+            font-size: 1.8rem;
+            font-weight: 800;
+            color: #fff;
+            margin-bottom: 6px;
+        }
+
+        .score-pill-container {
+            margin: 18px 0;
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 14px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+        }
+        .score-stat {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .score-stat .label {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .score-stat .val {
+            font-size: 1.7rem;
+            font-weight: 800;
+            font-family: monospace;
+            color: #fbbf24;
+            text-shadow: 0 0 15px rgba(251, 191, 36, 0.4);
+        }
+        .score-stat .val.coins {
+            color: #facc15;
+        }
+
+        .input-group {
+            margin: 16px 0 18px;
+            text-align: left;
+        }
+        .input-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #cbd5e1;
+            margin-bottom: 6px;
+        }
+        .input-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #090d16;
+            border: 1.5px solid #334155;
+            border-radius: 10px;
+            color: #f8fafc;
+            font-size: 1rem;
+            font-weight: 600;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+        .input-group input:focus {
+            border-color: #6366f1;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+        }
+        .input-group input::placeholder {
+            color: #64748b;
+            font-weight: 400;
+        }
+
+        .modal-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.98rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+        }
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(99, 102, 241, 0.6);
+            filter: brightness(1.1);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .btn-secondary-row {
+            display: flex;
+            gap: 10px;
+        }
+        .btn-secondary {
+            flex: 1;
+            background: rgba(30, 41, 59, 0.8);
+            color: #cbd5e1;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            font-size: 0.88rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-secondary:hover {
+            background: rgba(51, 65, 85, 0.9);
+            color: #fff;
+        }
+
+        .msg-box {
+            font-size: 0.82rem;
+            min-height: 18px;
+            margin-top: 6px;
+            transition: all 0.2s;
+        }
+        .msg-error { color: #f87171; }
+        .msg-success { color: #4ade80; }
+
+        /* Leaderboard Table Styles */
+        .lb-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+            text-align: left;
+        }
+        .lb-header-bar h2 {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #f8fafc;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .lb-btn-refresh {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            color: #cbd5e1;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.2s;
+        }
+        .lb-btn-refresh:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: #fff;
+        }
+
+        .lb-table-wrapper {
+            max-height: 380px;
+            overflow-y: auto;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            background: rgba(10, 15, 26, 0.7);
+        }
+        .lb-table-wrapper::-webkit-scrollbar {
+            width: 6px;
+        }
+        .lb-table-wrapper::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+        }
+
+        table.lb-table {
+            width: 100%;
+            border-collapse: collapse;
+            text-align: left;
+            font-size: 0.88rem;
+        }
+        table.lb-table th {
+            position: sticky;
+            top: 0;
+            background: #111827;
+            color: #94a3b8;
+            font-weight: 700;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 2;
+        }
+        table.lb-table td {
+            padding: 10px 14px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            color: #e2e8f0;
+        }
+        table.lb-table tr:hover {
+            background: rgba(255, 255, 255, 0.03);
+        }
+        table.lb-table tr.highlight-row {
+            background: rgba(99, 102, 241, 0.2) !important;
+            border-left: 3px solid #818cf8;
+        }
+        .rank-badge {
+            font-weight: 800;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            font-size: 0.85rem;
+        }
+        .rank-1 { background: rgba(234, 179, 8, 0.2); color: #facc15; }
+        .rank-2 { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+        .rank-3 { background: rgba(217, 119, 6, 0.2); color: #fb923c; }
+        .score-cell {
+            font-family: monospace;
+            font-weight: 700;
+            color: #fbbf24;
+            font-size: 0.95rem;
+        }
+        .date-cell {
+            color: #64748b;
+            font-size: 0.78rem;
+        }
+        .lb-empty-msg {
+            padding: 36px 16px;
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
     <header>
         <h1>Chicken Invaders 🐔🛸</h1>
         <p class="subtitle">Computer Graphics Module Project — C++ / OpenGL to WebAssembly</p>
+        <div class="header-actions">
+            <button id="btnOpenLeaderboard" class="btn-trophy">
+                🏆 Global Leaderboard
+            </button>
+        </div>
     </header>
 
     <div class="canvas-container">
@@ -134,6 +498,79 @@
         <span><span class="kbd">SPACE</span> Shoot</span>
         <span><span class="kbd">P</span> Pause</span>
         <span><span class="kbd">ENTER</span> Start Game</span>
+    </div>
+
+    <!-- Modal 1: End Game Score Submission -->
+    <div id="scoreModalBackdrop" class="modal-backdrop">
+        <div class="modal-box">
+            <span id="endGameTag" class="modal-tag tag-gameover">MISSION ENDED</span>
+            <h2 id="endGameTitle" class="modal-title">Game Over!</h2>
+            <p id="endGameDesc" style="color:#94a3b8; font-size:0.9rem;">Submit your record to the global leaderboard</p>
+
+            <div class="score-pill-container">
+                <div class="score-stat">
+                    <span class="label">Final Score</span>
+                    <span id="modalScoreVal" class="val">0</span>
+                </div>
+                <div class="score-stat">
+                    <span class="label">Coins</span>
+                    <span id="modalCoinsVal" class="val coins">0</span>
+                </div>
+            </div>
+
+            <div class="input-group">
+                <label for="playerNameInput">Pilot Name:</label>
+                <input type="text" id="playerNameInput" placeholder="Enter pilot callsign..." maxlength="20" autocomplete="off" />
+                <div id="submitMsg" class="msg-box"></div>
+            </div>
+
+            <div class="modal-buttons">
+                <button id="btnSubmitScore" class="btn-primary">🚀 Submit to Hall of Fame</button>
+                <div class="btn-secondary-row">
+                    <button id="btnViewLeaderboardFromEnd" class="btn-secondary">🏆 Leaderboard</button>
+                    <button id="btnPlayAgain" class="btn-secondary">🔄 Play Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Global Leaderboard View -->
+    <div id="leaderboardModalBackdrop" class="modal-backdrop">
+        <div class="modal-box leaderboard-box">
+            <button id="btnCloseLeaderboard" class="modal-close-btn" title="Close">&times;</button>
+            
+            <div class="lb-header-bar">
+                <div>
+                    <h2>🏆 Global Hall of Fame</h2>
+                    <p style="color:#94a3b8; font-size:0.82rem; margin-top:2px;">Top pilots worldwide ranked by score & time</p>
+                </div>
+                <button id="btnRefreshScores" class="lb-btn-refresh">
+                    ↻ Refresh
+                </button>
+            </div>
+
+            <div class="lb-table-wrapper">
+                <table class="lb-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 55px; text-align:center;">#</th>
+                            <th>Pilot</th>
+                            <th style="text-align:right;">Score</th>
+                            <th style="text-align:right;">Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboardTableBody">
+                        <tr>
+                            <td colspan="4" class="lb-empty-msg">Loading latest scores...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div style="margin-top: 18px; display:flex; justify-content: flex-end; gap: 10px;">
+                <button id="btnCloseLeaderboardBottom" class="btn-secondary" style="flex:none; padding:8px 20px;">Close</button>
+            </div>
+        </div>
     </div>
 
     <script type='text/javascript'>
@@ -174,6 +611,262 @@
         canvasElement.addEventListener('click', function() {
             canvasElement.focus();
         });
+
+        // =====================================================================
+        // Global Leaderboard & Supabase Frontend Integration
+        // =====================================================================
+        var currentEndScore = 0;
+        var currentEndCoins = 0;
+        var lastInsertedId = null;
+
+        // Initialize Supabase Client
+        var sbClient = null;
+        if (window.supabase && window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.url) {
+            try {
+                sbClient = window.supabase.createClient(
+                    window.SUPABASE_CONFIG.url,
+                    window.SUPABASE_CONFIG.anonKey
+                );
+                console.log("✅ Supabase client initialized for:", window.SUPABASE_CONFIG.url);
+            } catch (e) {
+                console.error("Failed to initialize Supabase client:", e);
+            }
+        }
+
+        // Modal Elements
+        var scoreModalBackdrop = document.getElementById('scoreModalBackdrop');
+        var leaderboardModalBackdrop = document.getElementById('leaderboardModalBackdrop');
+        var playerNameInput = document.getElementById('playerNameInput');
+        var modalScoreVal = document.getElementById('modalScoreVal');
+        var modalCoinsVal = document.getElementById('modalCoinsVal');
+        var endGameTag = document.getElementById('endGameTag');
+        var endGameTitle = document.getElementById('endGameTitle');
+        var submitMsg = document.getElementById('submitMsg');
+        var btnSubmitScore = document.getElementById('btnSubmitScore');
+        var leaderboardTableBody = document.getElementById('leaderboardTableBody');
+
+        // Prevent Emscripten from capturing or preventing default on input elements
+        ['keydown', 'keyup', 'keypress'].forEach(function(eventType) {
+            window.addEventListener(eventType, function(e) {
+                if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) {
+                    e.stopImmediatePropagation();
+                }
+            }, true); // Capture phase runs before Emscripten window listeners
+        });
+
+        // Preload saved pilot name or generate default callsign
+        var savedPilot = localStorage.getItem('chicken_pilot_name') || '';
+        if (savedPilot) {
+            playerNameInput.value = savedPilot;
+        } else {
+            playerNameInput.value = 'Pilot-' + Math.floor(100 + Math.random() * 900);
+        }
+
+        // C++ WebAssembly Callback when Game Over or Win happens
+        window.onGameFinished = function(finalScore, isWin, coins) {
+            currentEndScore = finalScore;
+            currentEndCoins = coins || 0;
+
+            modalScoreVal.textContent = currentEndScore.toLocaleString();
+            modalCoinsVal.textContent = currentEndCoins.toLocaleString();
+            submitMsg.textContent = '';
+            submitMsg.className = 'msg-box';
+            btnSubmitScore.disabled = false;
+            btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
+
+            if (isWin) {
+                endGameTag.className = 'modal-tag tag-win';
+                endGameTag.textContent = 'VICTORY ACHIEVED! 🌟';
+                endGameTitle.textContent = 'Galaxy Saved!';
+            } else {
+                endGameTag.className = 'modal-tag tag-gameover';
+                endGameTag.textContent = 'MISSION FAILED 💥';
+                endGameTitle.textContent = 'Game Over';
+            }
+
+            scoreModalBackdrop.style.display = 'flex';
+            setTimeout(function() {
+                playerNameInput.focus();
+                playerNameInput.select();
+            }, 100);
+        };
+
+        // Submit Score Function
+        async function submitPlayerScore() {
+            var name = playerNameInput.value.trim();
+            if (!name) {
+                name = 'Pilot-' + Math.floor(100 + Math.random() * 900);
+                playerNameInput.value = name;
+            }
+
+            localStorage.setItem('chicken_pilot_name', name);
+            btnSubmitScore.disabled = true;
+            btnSubmitScore.textContent = 'Submitting...';
+            submitMsg.textContent = '';
+
+            if (!sbClient) {
+                submitMsg.textContent = 'Supabase config missing. Stored locally!';
+                submitMsg.className = 'msg-box msg-error';
+                btnSubmitScore.disabled = false;
+                btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
+                return;
+            }
+
+            try {
+                var { data, error } = await sbClient
+                    .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
+                    .insert([
+                        { player_name: name, score: currentEndScore }
+                    ])
+                    .select();
+
+                if (error) {
+                    console.error("Supabase insert error:", error);
+                    submitMsg.textContent = 'Failed: ' + (error.message || 'Database error');
+                    submitMsg.className = 'msg-box msg-error';
+                    btnSubmitScore.disabled = false;
+                    btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
+                } else {
+                    if (data && data.length > 0) {
+                        lastInsertedId = data[0].id;
+                    }
+                    submitMsg.textContent = 'Score recorded globally!';
+                    submitMsg.className = 'msg-box msg-success';
+
+                    setTimeout(function() {
+                        scoreModalBackdrop.style.display = 'none';
+                        openLeaderboardModal();
+                    }, 600);
+                }
+            } catch (err) {
+                console.error("Submit exception:", err);
+                submitMsg.textContent = 'Error: ' + err.message;
+                submitMsg.className = 'msg-box msg-error';
+                btnSubmitScore.disabled = false;
+                btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
+            }
+        }
+
+        btnSubmitScore.addEventListener('click', submitPlayerScore);
+        playerNameInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                submitPlayerScore();
+            }
+        });
+
+        // Open & Fetch Leaderboard Modal
+        function openLeaderboardModal() {
+            leaderboardModalBackdrop.style.display = 'flex';
+            fetchLeaderboard();
+        }
+
+        function closeLeaderboardModal() {
+            leaderboardModalBackdrop.style.display = 'none';
+            canvasElement.focus();
+        }
+
+        async function fetchLeaderboard() {
+            leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">Fetching global rankings...</td></tr>';
+            
+            if (!sbClient) {
+                leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">Supabase client is not connected. Check supabase-config.js.</td></tr>';
+                return;
+            }
+
+            try {
+                // Fetch top 50: highest score first; on tie, earlier submission first
+                var { data, error } = await sbClient
+                    .from(window.SUPABASE_CONFIG.tableName || 'leaderboard')
+                    .select('id, player_name, score, created_at')
+                    .order('score', { ascending: false })
+                    .order('created_at', { ascending: true })
+                    .limit(50);
+
+                if (error) {
+                    console.error("Leaderboard fetch error:", error);
+                    leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg" style="color:#f87171;">Failed to load leaderboard: ' + error.message + '</td></tr>';
+                    return;
+                }
+
+                if (!data || data.length === 0) {
+                    leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg">No scores yet! Be the first pilot in the Hall of Fame.</td></tr>';
+                    return;
+                }
+
+                var html = '';
+                data.forEach(function(item, idx) {
+                    var rank = idx + 1;
+                    var rankDisplay = '#' + rank;
+                    var rankClass = '';
+                    if (rank === 1) {
+                        rankDisplay = '🥇';
+                        rankClass = 'rank-badge rank-1';
+                    } else if (rank === 2) {
+                        rankDisplay = '🥈';
+                        rankClass = 'rank-badge rank-2';
+                    } else if (rank === 3) {
+                        rankDisplay = '🥉';
+                        rankClass = 'rank-badge rank-3';
+                    } else {
+                        rankClass = 'rank-badge';
+                    }
+
+                    var isNew = (lastInsertedId && item.id === lastInsertedId);
+                    var rowClass = isNew ? 'highlight-row' : '';
+
+                    var dateStr = '';
+                    if (item.created_at) {
+                        var d = new Date(item.created_at);
+                        dateStr = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    }
+
+                    // Sanitize name for HTML display
+                    var safeName = document.createElement('div');
+                    safeName.textContent = item.player_name;
+                    var escapedName = safeName.innerHTML;
+
+                    html += '<tr class="' + rowClass + '">'
+                        + '<td style="text-align:center;"><span class="' + rankClass + '">' + rankDisplay + '</span></td>'
+                        + '<td style="font-weight:600;">' + escapedName + (isNew ? ' <span style="font-size:0.75rem; color:#818cf8; font-weight:bold;">(YOU)</span>' : '') + '</td>'
+                        + '<td style="text-align:right;" class="score-cell">' + Number(item.score).toLocaleString() + '</td>'
+                        + '<td style="text-align:right;" class="date-cell">' + dateStr + '</td>'
+                        + '</tr>';
+                });
+
+                leaderboardTableBody.innerHTML = html;
+            } catch (err) {
+                console.error("Fetch exception:", err);
+                leaderboardTableBody.innerHTML = '<tr><td colspan="4" class="lb-empty-msg" style="color:#f87171;">Network error loading leaderboard.</td></tr>';
+            }
+        }
+
+        // Action Buttons
+        document.getElementById('btnOpenLeaderboard').addEventListener('click', openLeaderboardModal);
+        document.getElementById('btnRefreshScores').addEventListener('click', fetchLeaderboard);
+        document.getElementById('btnCloseLeaderboard').addEventListener('click', closeLeaderboardModal);
+        document.getElementById('btnCloseLeaderboardBottom').addEventListener('click', closeLeaderboardModal);
+
+        document.getElementById('btnViewLeaderboardFromEnd').addEventListener('click', function() {
+            scoreModalBackdrop.style.display = 'none';
+            openLeaderboardModal();
+        });
+
+        function restartGame() {
+            scoreModalBackdrop.style.display = 'none';
+            leaderboardModalBackdrop.style.display = 'none';
+            if (Module._wasm_restart_game) {
+                Module._wasm_restart_game();
+            } else {
+                // Trigger Space key simulation to restart from game over
+                var evtDown = new KeyboardEvent('keydown', { key: ' ', code: 'Space', keyCode: 32, which: 32 });
+                var evtUp = new KeyboardEvent('keyup', { key: ' ', code: 'Space', keyCode: 32, which: 32 });
+                canvasElement.dispatchEvent(evtDown);
+                canvasElement.dispatchEvent(evtUp);
+            }
+            canvasElement.focus();
+        }
+
+        document.getElementById('btnPlayAgain').addEventListener('click', restartGame);
     </script>
     {{{ SCRIPT }}}
 </body>

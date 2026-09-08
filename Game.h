@@ -74,6 +74,9 @@ public:
     std::string uiMessage;
     int         uiMessageTimer;
 
+    // Leaderboard end-game bridge flag
+    bool        notifiedEndGame;
+
     Game();
     ~Game();
 
@@ -81,6 +84,7 @@ public:
     void reset();
     void update();
     void display();
+    void checkEndGameNotification();
 
     void spawnWave();
     void spawnExplosion(float x, float y, Color c, int count=20);
