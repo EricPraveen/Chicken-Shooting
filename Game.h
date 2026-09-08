@@ -109,6 +109,9 @@ public:
     bool        bossWarningActive;
     int         bossWarningTimer;
 
+    // Platform detection (Mobile vs Desktop)
+    bool        isMobile;
+
     Game();
     ~Game();
 

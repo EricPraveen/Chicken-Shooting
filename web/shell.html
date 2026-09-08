@@ -328,6 +328,14 @@
             color: #94a3b8;
             box-shadow: 0 4px 18px rgba(0, 0, 0, 0.5);
         }
+        @media (hover: none) and (pointer: coarse), (max-width: 1024px) {
+            .controls-card {
+                display: none !important;
+            }
+        }
+        body.is-mobile .controls-card {
+            display: none !important;
+        }
         .controls-card span {
             display: inline-flex;
             align-items: center;
@@ -1898,10 +1906,37 @@
         var loadingStatus = document.getElementById('loadingStatus');
         var canvasElement = document.getElementById('canvas');
 
+        // =====================================================================
+        // Platform & Mobile Device Detection
+        // =====================================================================
+        var isMobileDevice = (function() {
+            var ua = navigator.userAgent || '';
+            var isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 1)
+                       || window.matchMedia('(pointer: coarse)').matches;
+            var isMobileUA = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile|Tablet/i.test(ua);
+            return isMobileUA || isTouch;
+        })();
+
+        if (isMobileDevice) {
+            document.body.classList.add('is-mobile');
+            var cc = document.querySelector('.controls-card');
+            if (cc) cc.style.display = 'none';
+        }
+
+        function syncPlatformToWasm() {
+            if (typeof Module !== 'undefined' && Module._wasm_set_is_mobile) {
+                Module._wasm_set_is_mobile(isMobileDevice ? 1 : 0);
+            }
+        }
+
         var Module = {
             preRun: [],
+            onRuntimeInitialized: function() {
+                syncPlatformToWasm();
+            },
             postRun: [function() {
                 if (loadingStatus) loadingStatus.style.display = 'none';
+                syncPlatformToWasm();
                 canvasElement.focus();
             }],
             print: function(text) {
@@ -2950,6 +2985,20 @@
         }
 
         bindTouchBtn(document.getElementById('btnFire'), function(){ setShooting(true); }, function(){ setShooting(false); });
+
+        // Desktop / PC Keyboard Support: Esc and E keys trigger Force Shoot identically
+        window.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'e' || e.key === 'E') {
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+                setShooting(true);
+            }
+        });
+        window.addEventListener('keyup', function(e) {
+            if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'e' || e.key === 'E') {
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+                setShooting(false);
+            }
+        });
 
         var btnGamepadStart = document.getElementById('btnGamepadStart');
         if (btnGamepadStart) {

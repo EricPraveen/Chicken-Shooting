@@ -89,6 +89,11 @@ extern "C" {
     int wasm_is_paused() {
         return (g_game && g_game->state == GameState::PAUSED) ? 1 : 0;
     }
+
+    EMSCRIPTEN_KEEPALIVE
+    void wasm_set_is_mobile(int mobile) {
+        if (g_game) g_game->isMobile = (mobile != 0);
+    }
 }
 #endif
 
@@ -103,7 +108,8 @@ Game::Game()
       powerupTimer(0), coinTimer(0),
       bgScroll(0), uiMessageTimer(0),
       notifiedEndGame(false),
-      bossWarningActive(false), bossWarningTimer(0)
+      bossWarningActive(false), bossWarningTimer(0),
+      isMobile(false)
 {
     srand((unsigned)time(nullptr));
     init();
@@ -673,7 +679,9 @@ void Game::onKeyDown(unsigned char key){
         case 'd': case 'D': player.moveRight =true; break;
         case 'w': case 'W': player.moveUp    =true; break;
         case 's': case 'S': player.moveDown  =true; break;
-        case ' ':           player.isShooting =true; break;
+        case ' ':
+        case 'e': case 'E':
+        case 27:            player.isShooting =true; break; // ESC (27) & E trigger Force Shoot
     }
 }
 void Game::onKeyUp(unsigned char key){
@@ -682,7 +690,9 @@ void Game::onKeyUp(unsigned char key){
         case 'd': case 'D': player.moveRight =false; break;
         case 'w': case 'W': player.moveUp    =false; break;
         case 's': case 'S': player.moveDown  =false; break;
-        case ' ':           player.isShooting =false; break;
+        case ' ':
+        case 'e': case 'E':
+        case 27:            player.isShooting =false; break; // ESC (27) & E release Force Shoot
     }
 }
 void Game::onSpecialDown(int key){
@@ -1002,12 +1012,14 @@ void Game::drawHUD(){
 #endif
     }
 
-    // ── Pause hint ────────────────────────────────────────────────────────────
+    // ── Pause hint (only on Desktop/PC) ───────────────────────────────────────
+    if(!isMobile){
 #ifdef __EMSCRIPTEN__
-    renderArcadeText(WIN_W-96,14,"[P] PAUSE", Color(0.38f,0.35f,0.50f), 1.4f);
+        renderArcadeText(WIN_W-96,14,"[P] PAUSE", Color(0.38f,0.35f,0.50f), 1.4f);
 #else
-    drawText(WIN_W-80,12,"[P] Pause", Color(0.5f,0.5f,0.5f), GLUT_BITMAP_HELVETICA_12);
+        drawText(WIN_W-80,12,"[P] Pause", Color(0.5f,0.5f,0.5f), GLUT_BITMAP_HELVETICA_12);
 #endif
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -1062,19 +1074,25 @@ void Game::drawMenu(){
     // ── "PRESS ENTER" — classic arcade blinking ──────────────────────────────
     float blinkA = 0.45f + 0.55f * std::abs(std::sin(t * 2.8f));
 #ifdef __EMSCRIPTEN__
-    renderArcadeTextGlow(WIN_W/2-138, WIN_H/2+18, "PRESS START OR ENTER",
-        Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
-        Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
-    // Controls — dimmer secondary info
-    renderArcadeText(WIN_W/2-122, WIN_H/2-10, "WASD / ARROWS = MOVE",
-        Color(0.50f,0.50f,0.65f,0.85f), 1.4f);
-    renderArcadeText(WIN_W/2-114, WIN_H/2-30, "HOLD SPACE=SHOOT  P=PAUSE",
-        Color(0.42f,0.65f,0.55f,0.85f), 1.4f);
+    if(isMobile){
+        renderArcadeTextGlow(WIN_W/2-118, WIN_H/2+8, "TAP START TO PLAY",
+            Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
+            Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
+    } else {
+        renderArcadeTextGlow(WIN_W/2-138, WIN_H/2+18, "PRESS START OR ENTER",
+            Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
+            Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
+        // Controls — dimmer secondary info
+        renderArcadeText(WIN_W/2-122, WIN_H/2-10, "WASD / ARROWS = MOVE",
+            Color(0.50f,0.50f,0.65f,0.85f), 1.4f);
+        renderArcadeText(WIN_W/2-140, WIN_H/2-30, "HOLD SPACE/ESC = SHOOT  P=PAUSE",
+            Color(0.42f,0.65f,0.55f,0.85f), 1.4f);
+    }
 #else
     drawText(WIN_W/2-80, WIN_H/2+20,"PRESS ENTER TO START", Color(1,1,1,blinkA));
     drawText(WIN_W/2-100, WIN_H/2-10,"WASD or Arrow Keys to Move", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
-    drawText(WIN_W/2-100, WIN_H/2-28,"Hold Space = Shoot | P = Pause", Color(0.7f,0.7f,0.7f),
+    drawText(WIN_W/2-130, WIN_H/2-28,"Hold Space / Esc = Shoot | P = Pause", Color(0.7f,0.7f,0.7f),
              GLUT_BITMAP_HELVETICA_12);
 #endif
 
@@ -1119,10 +1137,15 @@ void Game::drawPauseScreen(){
 #ifdef __EMSCRIPTEN__
     renderArcadeTextOutlined(WIN_W/2-60, WIN_H/2+26, "PAUSED",
         Color(0.0f,0.95f,0.55f), 2.4f, Color(0.0f,0.25f,0.12f,0.9f));
-    renderArcadeText(WIN_W/2-132, WIN_H/2-6, "TAP START / PAUSE TO RESUME",
-        Color(0.75f,0.90f,0.80f,0.92f), 1.35f);
-    renderArcadeText(WIN_W/2-84, WIN_H/2-28, "P: RESUME  |  Q: MENU",
-        Color(0.40f,0.65f,0.50f,0.70f), 1.1f);
+    if(isMobile){
+        renderArcadeText(WIN_W/2-132, WIN_H/2-10, "TAP START / PAUSE TO RESUME",
+            Color(0.75f,0.90f,0.80f,0.92f), 1.35f);
+    } else {
+        renderArcadeText(WIN_W/2-132, WIN_H/2-6, "TAP START / PAUSE TO RESUME",
+            Color(0.75f,0.90f,0.80f,0.92f), 1.35f);
+        renderArcadeText(WIN_W/2-84, WIN_H/2-28, "P: RESUME  |  Q: MENU",
+            Color(0.40f,0.65f,0.50f,0.70f), 1.1f);
+    }
 #else
     drawTextLarge(WIN_W/2-50, WIN_H/2+20,"PAUSED", Color(0.0f,0.95f,0.55f));
     drawText(WIN_W/2-80, WIN_H/2-10,"[P] Resume  |  [Q] Quit to Menu", Color(0.8f,0.8f,0.8f));
@@ -1173,10 +1196,15 @@ void Game::drawGameOver(){
     renderArcadeTextWithShadow(WIN_W/2-80, WIN_H/2+1,
         "SCORE "+std::to_string(finalScore),
         Color(0.20f,0.95f,0.85f), 1.7f, 1.5f);
-    // Blinking "PRESS START OR ENTER"
+    // Blinking "PRESS START OR ENTER" / "TAP START TO PLAY AGAIN"
     float ba = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
-    renderArcadeText(WIN_W/2-138, WIN_H/2-22, "PRESS START OR ENTER",
-        Color(0.62f,0.60f,0.70f,ba), 1.4f);
+    if(isMobile){
+        renderArcadeText(WIN_W/2-126, WIN_H/2-22, "TAP START TO PLAY AGAIN",
+            Color(0.62f,0.60f,0.70f,ba), 1.4f);
+    } else {
+        renderArcadeText(WIN_W/2-138, WIN_H/2-22, "PRESS START OR ENTER",
+            Color(0.62f,0.60f,0.70f,ba), 1.4f);
+    }
 #else
     drawTextLarge(WIN_W/2-100, WIN_H/2+30,"GAME OVER", Color(0.9f,0.1f,0.1f,textPulse));
     drawText(WIN_W/2-70, WIN_H/2+5,"Score: "+std::to_string(finalScore), Color(0.2f,0.95f,0.85f));
@@ -1230,8 +1258,13 @@ void Game::drawWinScreen(){
         Color(1.0f,0.70f,0.20f), 1.6f, 1.2f);
     // Blinking continue
     float baWin = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
-    renderArcadeText(WIN_W/2-138, WIN_H/2-32, "PRESS START OR ENTER",
-        Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+    if(isMobile){
+        renderArcadeText(WIN_W/2-126, WIN_H/2-32, "TAP START TO PLAY AGAIN",
+            Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+    } else {
+        renderArcadeText(WIN_W/2-138, WIN_H/2-32, "PRESS START OR ENTER",
+            Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+    }
 #else
     drawTextLarge(WIN_W/2-100, WIN_H/2+40, "YOU WIN!", Color(0.2f,1.0f,0.3f));
     drawText(WIN_W/2-80, WIN_H/2+12,"Final Score: "+std::to_string(player.score), Color(1,1,0.3f));
