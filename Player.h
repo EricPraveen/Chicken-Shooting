@@ -46,6 +46,7 @@ struct Player {
 
     bool moveLeft, moveRight, moveUp, moveDown;
     bool isShooting;
+    bool shotFired;
 
     Player(float startX=WIN_W/2.0f, float startY=80.0f)
         : x(startX), y(startY), speed(5.0f),
@@ -57,7 +58,7 @@ struct Player {
           shootCooldown(8), shootTimer(8),
           engineFlicker(0), engineAccel(0),
           moveLeft(false), moveRight(false), moveUp(false), moveDown(false),
-          isShooting(false)
+          isShooting(false), shotFired(false)
     {}
 
     void activateShield(int dur=600)       { shieldActive=true; shieldTimer=dur; }
@@ -65,6 +66,7 @@ struct Player {
     void activateFireRate(int dur=500)     { fireRateActive=true; fireRateTimer=dur; shootCooldown=3; }
 
     void update(){
+        shotFired = false;
         // Invincibility countdown after losing a life
         if(respawnTimer > 0) respawnTimer--;
 
@@ -88,6 +90,7 @@ struct Player {
         if(isShooting){
             if(++shootTimer >= shootCooldown){
                 shootTimer = 0;
+                shotFired = true;
                 bool s = strongBulletActive;
                 if(s){
                     bullets.emplace_back(x-6, y+30, true);

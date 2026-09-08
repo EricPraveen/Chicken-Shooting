@@ -53,6 +53,7 @@ struct Boss {
     int   eggBurstCooldown;
 
     int hitFlash;
+    bool laserJustFired;
 
     // ------------------------------------------------------------------------
     // Constructor — pass game level so beam count scales correctly
@@ -69,7 +70,7 @@ struct Boss {
           beamCount(2 + lvl),           // 3 beams level-1, 4 level-2, 5 level-3
           beamLength(WIN_H * 1.1f),
           eggBurstTimer(0), eggBurstCooldown(110),
-          hitFlash(0)
+          hitFlash(0), laserJustFired(false)
     {
         if(beamCount > 5) beamCount = 5;
         for(int i=0;i<5;i++) beamAngles[i] = 0.0f;
@@ -156,6 +157,7 @@ struct Boss {
                     // Warning over → FIRE
                     laserPhase = LaserPhase::FIRING;
                     laserTimer = firingDuration;
+                    laserJustFired = true;
                     break;
                 case LaserPhase::FIRING:
                     // Done → back to IDLE

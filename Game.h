@@ -77,6 +77,10 @@ public:
     // Leaderboard end-game bridge flag
     bool        notifiedEndGame;
 
+    // Boss Warning Sequence
+    bool        bossWarningActive;
+    int         bossWarningTimer;
+
     Game();
     ~Game();
 
@@ -85,9 +89,11 @@ public:
     void update();
     void display();
     void checkEndGameNotification();
+    void playSfx(const char* name);
 
     void spawnWave();
     void spawnExplosion(float x, float y, Color c, int count=20);
+    void triggerBossWarning();
     void spawnBoss();
 
     void handleBulletCollisions();
@@ -101,6 +107,7 @@ public:
     void drawGameOver();
     void drawWinScreen();
     void drawStarfield();
+    void drawBossWarning();
 
 #ifdef __EMSCRIPTEN__
     void drawText(float x, float y, const std::string& s, Color c={1,1,1},
