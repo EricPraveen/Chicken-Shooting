@@ -47,8 +47,8 @@ struct Enemy {
     float entryStartX, entryStartY;
     float entryCtrlX, entryCtrlY;
 
-    Enemy(float x, float y, EnemyType t=EnemyType::NORMAL)
-        : x(x), y(y), baseX(x), speed(2.0f), descentSpeed(0.08f),
+    Enemy(float x, float y, EnemyType t=EnemyType::NORMAL, int lvl=1)
+        : x(x), y(y), baseX(x), speed(2.0f), descentSpeed(0.06f + lvl * 0.04f),
           hp(3), maxHp(3), active(true), type(t),
           animTime(0), wingFlap(0),
           hitFlash(0),
@@ -57,9 +57,9 @@ struct Enemy {
           entryStartX(x), entryStartY(y), entryCtrlX(x), entryCtrlY(y)
     {
         switch(t){
-            case EnemyType::NORMAL:  hp=3;  maxHp=3;  speed=2.0f; eggCooldown=360; break;
-            case EnemyType::FAST:    hp=2;  maxHp=2;  speed=4.0f; eggCooldown=240; break;
-            case EnemyType::ARMORED: hp=6;  maxHp=6;  speed=1.5f; eggCooldown=480; break;
+            case EnemyType::NORMAL:  hp=3;  maxHp=3;  speed=1.8f + lvl*0.2f; eggCooldown=std::max(180, 520 - lvl*80); break;
+            case EnemyType::FAST:    hp=2;  maxHp=2;  speed=3.2f + lvl*0.4f; eggCooldown=std::max(140, 360 - lvl*60); break;
+            case EnemyType::ARMORED: hp=6;  maxHp=6;  speed=1.2f + lvl*0.2f; eggCooldown=std::max(220, 600 - lvl*80); break;
         }
         eggTimer = rand()%eggCooldown;
     }

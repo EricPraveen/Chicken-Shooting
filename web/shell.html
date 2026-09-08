@@ -203,9 +203,16 @@
             gap: 6px;
         }
         .cabinet-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
+            display: inline-block;
+            padding: 5px 10px;
+            background: #0f141d;
+            border: 1px solid #1e2634;
+            border-radius: 3px;
+            color: #38bdf8;
+            font-size: 0.52rem;
+            letter-spacing: 1.2px;
+            text-shadow: 0 0 8px rgba(56, 189, 248, 0.4);
+            max-width: 200px;
             overflow: hidden;
             text-overflow: ellipsis;
             white-space: nowrap;
@@ -213,39 +220,112 @@
         .cabinet-led {
             display: inline-flex;
             align-items: center;
-            gap: 6px;
+            gap: 7px;
             color: #4ade80;
+            font-size: 0.52rem;
+            letter-spacing: 1px;
         }
         .cabinet-led::before {
             content: '';
             display: inline-block;
-            width: 6px;
-            height: 6px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #22c55e;
-            box-shadow: 0 0 8px #22c55e;
+            box-shadow: 0 0 10px #22c55e;
         }
         .cabinet-btn-audio {
             font-family: var(--font-pixel);
-            font-size: 0.44rem;
-            letter-spacing: 1px;
-            background: #111722;
-            border: 1px solid #28374d;
+            font-size: 0.56rem;
+            letter-spacing: 1.2px;
+            background: #121926;
+            border: 1.5px solid #2f435e;
             color: var(--retro-cyan);
-            padding: 3px 8px;
-            border-radius: 2px;
+            padding: 6px 14px;
+            border-radius: 4px;
             cursor: pointer;
-            transition: all 0.15s;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
         }
         .cabinet-btn-audio:hover {
-            background: #1a2538;
+            background: #1c283c;
             border-color: var(--retro-cyan);
             color: #fff;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+            transform: translateY(-1px);
         }
         .cabinet-btn-audio.muted {
             color: #64748b;
             border-color: #1e293b;
             background: #0d111a;
+            box-shadow: none;
+        }
+
+        /* Large Centered Scoreboard Buttons */
+        .cabinet-center-scores {
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            color: #fbbf24;
+            background: linear-gradient(135deg, #1e1b18 0%, #2e2008 100%);
+            border: 1.5px solid #f59e0b;
+            border-radius: 4px;
+            padding: 5px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            letter-spacing: 1px;
+            box-shadow: 0 0 14px rgba(245, 158, 11, 0.35);
+            transition: all 0.15s;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .cabinet-center-scores:hover, .cabinet-center-scores:active {
+            background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
+            color: #000;
+            box-shadow: 0 0 22px rgba(245, 158, 11, 0.8);
+            transform: translateY(-1px);
+        }
+
+        .center-trophy-bar {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 12px 0 6px 0;
+            width: 100%;
+        }
+        .btn-trophy-large {
+            font-family: var(--font-pixel);
+            font-size: 0.65rem;
+            letter-spacing: 1.5px;
+            color: #ffffff;
+            background: linear-gradient(135deg, #b45309 0%, #f59e0b 50%, #fbbf24 100%);
+            border: 2px solid #fde047;
+            padding: 12px 26px;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 
+                0 0 22px rgba(245, 158, 11, 0.5),
+                0 6px 18px rgba(0, 0, 0, 0.7);
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .btn-trophy-large:hover, .btn-trophy-large:active {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 
+                0 0 35px rgba(251, 191, 36, 0.85),
+                0 8px 24px rgba(0, 0, 0, 0.9);
+            background: linear-gradient(135deg, #d97706 0%, #fbbf24 100%);
         }
 
         /* ── Canvas container: arcade screen bezel with CRT scanlines ── */
@@ -303,10 +383,10 @@
             outline: none;
             display: block;
             aspect-ratio: 4 / 3;
+            width: 100%;
+            height: 100%;
             max-width: 100%;
             max-height: 100%;
-            width: auto;
-            height: auto;
             object-fit: contain;
             margin: auto;
         }
@@ -516,23 +596,204 @@
             border-color: #94a3b8;
         }
 
+        /* ================================================================
+           FULLSCREEN RETRO ARCADE LOADING OVERLAY WITH FLYING SPACESHIP
+        ================================================================ */
+        #loadingOverlay {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 50% 50%, #0d1424 0%, #03060c 100%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            overflow: hidden;
+            transition: opacity 0.5s ease, visibility 0.5s ease;
+        }
+        #loadingOverlay.fade-out {
+            opacity: 0;
+            visibility: hidden;
+            pointer-events: none;
+        }
+        .loading-stars-layer {
+            position: absolute;
+            inset: 0;
+            background-image: 
+                radial-gradient(1.5px 1.5px at 20px 30px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 80px 120px, #38bdf8, rgba(0,0,0,0)),
+                radial-gradient(1px 1px at 150px 200px, #ffffff, rgba(0,0,0,0)),
+                radial-gradient(2px 2px at 260px 80px, #00e5ff, rgba(0,0,0,0)),
+                radial-gradient(1.5px 1.5px at 350px 240px, #a855f7, rgba(0,0,0,0));
+            background-size: 400px 400px;
+            animation: warpStarMotion 6s linear infinite;
+            opacity: 0.65;
+            pointer-events: none;
+        }
+        @keyframes warpStarMotion {
+            0% { transform: translateY(0); }
+            100% { transform: translateY(400px); }
+        }
+        .loading-content-box {
+            position: relative;
+            z-index: 2;
+            width: 100%;
+            max-width: 540px;
+            background: rgba(12, 16, 26, 0.94);
+            border: 2px solid #24344d;
+            border-radius: 8px;
+            padding: 30px 26px;
+            box-shadow: 0 0 40px rgba(0, 229, 255, 0.15), 0 20px 60px rgba(0,0,0,0.9);
+            text-align: center;
+        }
+        .loading-title-marquee {
+            font-family: var(--font-pixel);
+            font-size: 1.15rem;
+            color: #00e5ff;
+            text-shadow: 0 0 14px rgba(0, 229, 255, 0.7);
+            letter-spacing: 2px;
+            margin-bottom: 6px;
+        }
+        .loading-sub-tag {
+            font-family: var(--font-terminal);
+            font-size: 1.15rem;
+            color: #94a3b8;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+        .loading-ship-track {
+            position: relative;
+            width: 100%;
+            height: 56px;
+            margin-bottom: 12px;
+        }
+        .loading-ship-wrapper {
+            position: absolute;
+            top: 0px;
+            left: 0%;
+            transform: translateX(-50%);
+            transition: left 0.12s linear;
+            display: flex;
+            align-items: center;
+        }
+        .loading-ship-exhaust {
+            width: 30px;
+            height: 12px;
+            background: linear-gradient(270deg, #ff2200, #ffaa00, transparent);
+            border-radius: 6px;
+            margin-right: -4px;
+            animation: exhaustPulse 0.12s ease-in-out infinite alternate;
+            filter: drop-shadow(0 0 6px #ff4400);
+        }
+        .loading-ship-svg {
+            transform: rotate(90deg);
+            filter: drop-shadow(0 0 10px rgba(0, 229, 255, 0.65));
+        }
+        @keyframes exhaustPulse {
+            0% { transform: scaleX(0.7); opacity: 0.6; }
+            100% { transform: scaleX(1.4); opacity: 1; }
+        }
+        .loading-bar-outer {
+            position: relative;
+            width: 100%;
+            height: 18px;
+            background: #090d15;
+            border: 2px solid #28374d;
+            border-radius: 4px;
+            padding: 2px;
+            box-shadow: inset 0 0 10px rgba(0,0,0,0.8);
+            overflow: hidden;
+        }
+        .loading-bar-inner {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #007799 0%, #00e5ff 50%, #00ffaa 100%);
+            border-radius: 2px;
+            box-shadow: 0 0 12px rgba(0, 229, 255, 0.8);
+            transition: width 0.08s ease-out;
+        }
+        .loading-meta-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 14px;
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+        }
+        .loading-telemetry {
+            color: #94a3b8;
+            letter-spacing: 1px;
+        }
+        .loading-percent {
+            color: #00ffaa;
+            text-shadow: 0 0 8px rgba(0, 255, 170, 0.6);
+            font-size: 0.65rem;
+        }
+
+        /* Mission Briefing Modal Box */
+        .modal-box.briefing-modal-box {
+            max-width: 580px;
+            padding: 24px 28px;
+            border-color: #00e5ff;
+            box-shadow: 0 0 35px rgba(0, 229, 255, 0.18), 0 25px 60px rgba(0, 0, 0, 0.95);
+        }
+        .briefing-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            text-align: left;
+            margin: 14px 0;
+        }
+        @media (max-width: 600px) {
+            .briefing-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        .briefing-card {
+            background: rgba(14, 20, 32, 0.85);
+            border: 1px solid rgba(40, 60, 90, 0.6);
+            border-radius: 5px;
+            padding: 12px 14px;
+        }
+        .briefing-card-title {
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            color: #00ffaa;
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .briefing-card-content {
+            font-family: var(--font-terminal);
+            font-size: 1.05rem;
+            color: #cbd5e1;
+            line-height: 1.45;
+        }
+        .powerup-list div {
+            margin-bottom: 4px;
+        }
+
         .modal-box.leaderboard-box {
-            max-width: 630px;
-            padding: 22px 26px;
+            max-width: 820px;
+            width: 92vw;
+            padding: 28px 32px;
         }
 
         .modal-close-btn {
             position: absolute;
-            top: 14px;
-            right: 16px;
+            top: 16px;
+            right: 18px;
             font-family: var(--font-pixel);
-            font-size: 0.6rem;
+            font-size: 0.85rem;
             background: #18202d;
             border: 1px solid #2d3b4e;
             color: #94a3b8;
-            width: 30px;
-            height: 24px;
-            border-radius: 2px;
+            width: 38px;
+            height: 32px;
+            border-radius: 3px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -808,17 +1069,17 @@
         /* Filter dropdown */
         .filter-dropdown {
             width: auto;
-            min-width: 165px;
+            min-width: 190px;
         }
         .filter-dropdown .custom-dropdown-btn {
-            padding: 5px 10px;
-            font-size: 0.92rem;
-            border-radius: 2px;
+            padding: 8px 14px;
+            font-size: 1.05rem;
+            border-radius: 3px;
         }
         .filter-dropdown .custom-dropdown-menu {
             right: 0;
             left: auto;
-            width: 230px;
+            width: 250px;
         }
 
         .input-row-grid {
@@ -905,32 +1166,32 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 12px;
+            margin-bottom: 16px;
             text-align: left;
         }
         .lb-header-bar h2 {
             font-family: var(--font-pixel);
-            font-size: 0.80rem;
+            font-size: 1.05rem;
             color: var(--retro-cyan);
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 10px;
             letter-spacing: 2px;
-            text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+            text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
         }
         .lb-btn-refresh {
             font-family: var(--font-pixel);
-            font-size: 0.48rem;
-            letter-spacing: 1px;
+            font-size: 0.58rem;
+            letter-spacing: 1.5px;
             background: #141a24;
-            border: 1px solid #2d3b4e;
+            border: 1.5px solid #2d3b4e;
             color: #94a3b8;
-            padding: 6px 10px;
-            border-radius: 2px;
+            padding: 8px 16px;
+            border-radius: 4px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            gap: 6px;
             transition: all 0.15s;
         }
         .lb-btn-refresh:hover {
@@ -940,16 +1201,16 @@
         }
 
         .lb-table-wrapper {
-            max-height: 360px;
+            max-height: 420px;
             overflow-y: auto;
-            border-radius: 3px;
-            border: 1px solid #283548;
+            border-radius: 4px;
+            border: 1.5px solid #283548;
             background: #090d14;
         }
-        .lb-table-wrapper::-webkit-scrollbar { width: 5px; }
+        .lb-table-wrapper::-webkit-scrollbar { width: 6px; }
         .lb-table-wrapper::-webkit-scrollbar-thumb {
             background: #283548;
-            border-radius: 2px;
+            border-radius: 3px;
         }
 
         table.lb-table {
@@ -957,7 +1218,7 @@
             border-collapse: collapse;
             text-align: left;
             font-family: var(--font-terminal);
-            font-size: 1.0rem;
+            font-size: 1.25rem;
             letter-spacing: 1px;
         }
         table.lb-table th {
@@ -966,15 +1227,15 @@
             background: #111622;
             color: #94a3b8;
             font-family: var(--font-pixel);
-            font-size: 0.48rem;
+            font-size: 0.58rem;
             text-transform: uppercase;
             letter-spacing: 2px;
-            padding: 10px 12px;
-            border-bottom: 1px solid #283548;
+            padding: 12px 16px;
+            border-bottom: 1.5px solid #283548;
             z-index: 2;
         }
         table.lb-table td {
-            padding: 9px 12px;
+            padding: 12px 16px;
             border-bottom: 1px solid rgba(40, 53, 72, 0.40);
             color: #cbd5e1;
             vertical-align: middle;
@@ -989,23 +1250,23 @@
 
         .score-cell {
             font-family: var(--font-pixel);
-            font-size: 0.65rem;
+            font-size: 0.82rem;
             color: var(--retro-cyan);
             text-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
         }
         .date-cell {
             font-family: var(--font-terminal);
-            font-size: 0.90rem;
+            font-size: 1.15rem;
             color: #64748b;
         }
 
         .rank-badge {
             display: inline-block;
             font-family: var(--font-pixel);
-            font-size: 0.55rem;
-            min-width: 36px;
+            font-size: 0.70rem;
+            min-width: 44px;
             text-align: center;
-            padding: 2px 4px;
+            padding: 4px 6px;
         }
         .rank-1  { color: #ffc107; text-shadow: 0 0 10px rgba(255, 193, 7, 0.65); }
         .rank-2  { color: #cbd5e1; text-shadow: 0 0 8px rgba(200,200,200,0.4); }
@@ -1018,10 +1279,10 @@
 
         .lb-empty-msg {
             text-align: center;
-            padding: 32px;
+            padding: 36px;
             color: #64748b;
             font-family: var(--font-terminal);
-            font-size: 1.05rem;
+            font-size: 1.2rem;
             letter-spacing: 1px;
         }
 
@@ -1176,11 +1437,12 @@
             -webkit-user-select: none;
         }
 
-        @media (max-width: 900px), (pointer: coarse) {
+        @media (pointer: coarse) {
             .virtual-gamepad {
                 display: flex;
             }
         }
+        body.is-mobile .virtual-gamepad,
         .virtual-gamepad.force-show {
             display: flex !important;
         }
@@ -1506,8 +1768,16 @@
             z-index: 25 !important;
             align-items: flex-end !important;
             justify-content: space-between !important;
-            padding: 0 max(18px, env(safe-area-inset-right, 18px)) max(12px, env(safe-area-inset-bottom, 12px)) max(18px, env(safe-area-inset-left, 18px)) !important;
+            padding: 0 max(24px, env(safe-area-inset-right, 24px)) max(32px, env(safe-area-inset-bottom, 32px)) max(24px, env(safe-area-inset-left, 24px)) !important;
             box-sizing: border-box !important;
+        }
+        /* On desktop mouse/keyboard devices, hide touch gamepad even in fullscreen mode */
+        @media (hover: hover) and (pointer: fine) {
+            body.fullscreen-mode .virtual-gamepad,
+            :fullscreen .virtual-gamepad,
+            :-webkit-full-screen .virtual-gamepad {
+                display: none !important;
+            }
         }
         body.fullscreen-mode .joystick-zone,
         body.fullscreen-mode .action-cluster,
@@ -1545,11 +1815,11 @@
             .cabinet-badge {
                 display: none !important;
             }
-            .joystick-base { width: 110px; height: 110px; }
-            .joystick-well { width: 70px; height: 70px; }
-            .joystick-washer { width: 50px; height: 50px; }
-            .joystick-ball { width: 45px; height: 45px; }
-            .fire-btn-rim { width: 74px; height: 74px; }
+            .joystick-base { width: 105px; height: 105px; }
+            .joystick-well { width: 68px; height: 68px; }
+            .joystick-washer { width: 48px; height: 48px; }
+            .joystick-ball { width: 42px; height: 42px; }
+            .fire-btn-rim { width: 70px; height: 70px; }
             .gamepad-pill-btn { font-size: 0.44rem; padding: 6px 12px; }
             .modal-box { padding: 18px 14px; }
         }
@@ -1574,7 +1844,7 @@
                 flex: 1 1 0;
                 width: 100%;
                 min-height: 0;
-                max-height: calc(100dvh - 165px);
+                max-height: calc(100dvh - 190px);
                 display: flex;
                 justify-content: center;
                 align-items: center;
@@ -1589,20 +1859,20 @@
             }
             .virtual-gamepad {
                 display: flex !important;
-                padding: 6px 12px max(20px, env(safe-area-inset-bottom, 20px)) 12px !important;
+                padding: 6px 12px max(24px, env(safe-area-inset-bottom, 24px)) 12px !important;
                 flex-shrink: 0;
             }
         }
 
-        /* ── Landscape Console Layout ── */
-        @media (orientation: landscape) {
+        /* ── Mobile Landscape Console Layout (Only Touch Devices / Mobile Phones) ── */
+        @media (hover: none) and (pointer: coarse) and (orientation: landscape), (max-height: 550px) and (max-width: 950px) and (orientation: landscape) {
             body {
-                flex-direction: row;
+                flex-direction: column;
                 padding: 0;
                 height: 100dvh;
                 overflow: hidden;
             }
-            header, .controls-card {
+            header, .controls-card, .center-trophy-bar {
                 display: none !important;
             }
             .arcade-cabinet {
@@ -1659,7 +1929,7 @@
                 border: none;
                 box-shadow: none;
                 pointer-events: none;
-                padding: 0 max(18px, env(safe-area-inset-right, 18px)) max(12px, env(safe-area-inset-bottom, 12px)) max(18px, env(safe-area-inset-left, 18px));
+                padding: 0 max(24px, env(safe-area-inset-right, 24px)) max(32px, env(safe-area-inset-bottom, 32px)) max(24px, env(safe-area-inset-left, 24px)) !important;
                 align-items: flex-end;
                 justify-content: space-between;
                 z-index: 25;
@@ -1673,20 +1943,88 @@
     </style>
 </head>
 <body>
+    <!-- Fullscreen Retro Arcade Loader with Flying Spaceship -->
+    <div id="loadingOverlay">
+        <div class="loading-stars-layer"></div>
+        <div class="loading-content-box">
+            <div class="loading-title-marquee">CHICKEN INVADERS</div>
+            <div class="loading-sub-tag">SECTOR DEFENSE INITIALIZATION</div>
+
+            <!-- Spaceship Flight Runway with Ultra-Detailed Star Cruiser -->
+            <div class="loading-ship-track">
+                <div class="loading-ship-wrapper" id="loadingShipWrapper">
+                    <div class="loading-ship-exhaust"></div>
+                    <!-- Ultra-Detailed Cyber Fighter Cruiser SVG -->
+                    <svg class="loading-ship-svg" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" style="width: 58px; height: 58px;">
+                        <defs>
+                            <linearGradient id="hullGrad" x1="0" y1="0" x2="1" y2="1">
+                                <stop offset="0%" stop-color="#0284c7"/>
+                                <stop offset="50%" stop-color="#0369a1"/>
+                                <stop offset="100%" stop-color="#0f172a"/>
+                            </linearGradient>
+                            <linearGradient id="wingGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#38bdf8"/>
+                                <stop offset="100%" stop-color="#0284c7"/>
+                            </linearGradient>
+                            <linearGradient id="cockpitGrad" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="#00ffcc"/>
+                                <stop offset="50%" stop-color="#00b4d8"/>
+                                <stop offset="100%" stop-color="#0077b6"/>
+                            </linearGradient>
+                            <filter id="glowG" x="-20%" y="-20%" width="140%" height="140%">
+                                <feGaussianBlur stdDeviation="2" result="blur"/>
+                                <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+                            </filter>
+                        </defs>
+                        <!-- Outer Wings Sweep -->
+                        <polygon points="10,64 36,46 36,26" fill="url(#wingGrad)" stroke="#7dd3fc" stroke-width="1.2"/>
+                        <polygon points="70,64 44,46 44,26" fill="url(#wingGrad)" stroke="#7dd3fc" stroke-width="1.2"/>
+                        <!-- Wing Panel Armor Ridges -->
+                        <polygon points="18,60 36,48 36,36" fill="#0369a1" opacity="0.75"/>
+                        <polygon points="62,60 44,48 44,36" fill="#0369a1" opacity="0.75"/>
+                        <!-- Wingtip Laser Pods -->
+                        <rect x="6" y="38" width="4" height="20" rx="1.5" fill="#38bdf8" stroke="#00e5ff" stroke-width="1"/>
+                        <rect x="70" y="38" width="4" height="20" rx="1.5" fill="#38bdf8" stroke="#00e5ff" stroke-width="1"/>
+                        <circle cx="8" cy="36" r="2.5" fill="#00ffcc" filter="url(#glowG)"/>
+                        <circle cx="72" cy="36" r="2.5" fill="#00ffcc" filter="url(#glowG)"/>
+                        <!-- Main Forward Fuselage -->
+                        <polygon points="40,6 52,56 40,68 28,56" fill="url(#hullGrad)" stroke="#38bdf8" stroke-width="1.8"/>
+                        <line x1="40" y1="8" x2="40" y2="66" stroke="#00e5ff" stroke-width="1.2" opacity="0.8"/>
+                        <!-- Intake Vents -->
+                        <polygon points="34,44 38,44 36,54 32,54" fill="#0f172a" stroke="#0284c7" stroke-width="0.8"/>
+                        <polygon points="46,44 42,44 44,54 48,54" fill="#0f172a" stroke="#0284c7" stroke-width="0.8"/>
+                        <!-- Cockpit Canopy Glass -->
+                        <polygon points="40,20 45,38 40,44 35,38" fill="url(#cockpitGrad)" stroke="#ffffff" stroke-width="1" filter="url(#glowG)"/>
+                        <ellipse cx="40" cy="28" rx="2" ry="4" fill="#ffffff" opacity="0.6"/>
+                        <!-- Rear Twin Ion Thruster Bells -->
+                        <rect x="31" y="66" width="6" height="5" rx="1" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+                        <rect x="43" y="66" width="6" height="5" rx="1" fill="#1e293b" stroke="#f59e0b" stroke-width="1"/>
+                        <ellipse cx="34" cy="71" rx="2.5" ry="1.5" fill="#ffea00"/>
+                        <ellipse cx="46" cy="71" rx="2.5" ry="1.5" fill="#ffea00"/>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Segmented Progress Bar -->
+            <div class="loading-bar-outer">
+                <div class="loading-bar-inner" id="loadingBarInner"></div>
+            </div>
+
+            <div class="loading-meta-row">
+                <span class="loading-telemetry" id="loadingSubtext">INITIALIZING DEFENSE SYSTEMS...</span>
+                <span class="loading-percent" id="loadingPercent">0%</span>
+            </div>
+        </div>
+    </div>
+
     <header>
         <h1>Chicken Invaders 🐔🛸</h1>
-        <p class="subtitle">Computer Graphics Module Project — C++ / OpenGL to WebAssembly</p>
-        <div class="header-actions">
-            <button id="btnOpenLeaderboard" class="btn-trophy">
-                🏆 Global Leaderboard
-            </button>
-        </div>
     </header>
 
     <div class="arcade-cabinet">
         <div class="cabinet-header">
-            <div class="cabinet-badge">ARCADE SYSTEM // 60 FPS</div>
-            <div style="display: flex; align-items: center; gap: 8px;">
+            <div class="cabinet-badge">ARCADE // 60 FPS</div>
+            <div style="display: flex; align-items: center; gap: 10px;">
                 <button id="btnFullscreenToggle" class="cabinet-btn-audio" type="button" title="Toggle Fullscreen Mode">⛶ FULLSCREEN</button>
                 <button id="btnAudioToggle" class="cabinet-btn-audio" type="button" title="Toggle Sound (M)">🔊 SFX ON</button>
                 <div class="cabinet-led">PWR</div>
@@ -1736,6 +2074,13 @@
                 </div>
             </div>
         </div>
+    </div>
+
+    <!-- Centered Large Leaderboard Action Bar -->
+    <div class="center-trophy-bar">
+        <button id="btnMainLeaderboard" class="btn-trophy-large" type="button">
+            🏆 VIEW GLOBAL HALL OF FAME // LEADERBOARD
+        </button>
     </div>
 
     <div class="controls-card">
@@ -1848,6 +2193,69 @@
         </div>
     </div>
 
+    <!-- Modal: Mission Briefing / Detailed Instructions -->
+    <div id="briefingModalBackdrop" class="modal-backdrop">
+        <div class="modal-box briefing-modal-box" style="max-width: 660px; padding: 22px 26px;">
+            <span class="modal-tag" style="background: rgba(0, 180, 255, 0.15); color: #00e5ff; border: 1px solid #00e5ff;">MISSION BRIEFING // SECTOR 1 ARCHIVES</span>
+            <h2 class="modal-title" style="color: #00e5ff; text-shadow: 0 0 14px rgba(0,229,255,0.6); margin: 6px 0 2px 0;">CHICKEN INVADERS</h2>
+            <div style="font-family: var(--font-terminal); font-size: 1.15rem; color: #94a3b8; margin-bottom: 12px;">
+                DEFEND EARTH FROM THE FEATHERED INVASION FLEET!
+            </div>
+
+            <div class="briefing-grid" style="grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">
+                <!-- Card 1: Controls -->
+                <div class="briefing-card">
+                    <div class="briefing-card-title">🕹️ FLIGHT & WEAPONS</div>
+                    <div class="briefing-card-content">
+                        <div><b>PC / Desktop Keyboard:</b></div>
+                        <div>• <span class="kbd">SPACE</span> : Hold to Fire Cannons</div>
+                        <div>• <span class="kbd">W</span><span class="kbd">A</span><span class="kbd">S</span><span class="kbd">D</span> / Arrows: 8-Way Flight</div>
+                        <div>• <span class="kbd">P</span> : Pause / Resume</div>
+                        <div style="margin-top:5px;"><b>Mobile / Touch Deck:</b></div>
+                        <div>• Left Joystick: Steer Spacecraft</div>
+                        <div>• <span style="color:#ff5533; font-weight:bold;">FIRE</span> Button: Rapid Laser Cannon</div>
+                    </div>
+                </div>
+
+                <!-- Card 2: Enemy Roster -->
+                <div class="briefing-card">
+                    <div class="briefing-card-title">🐔 ENEMY ARMADA</div>
+                    <div class="briefing-card-content">
+                        <div>• ⚪ <b>Cadet Cluck</b>: Standard infantry</div>
+                        <div>• 🔵 <b>Swift Swooper</b>: High-speed attacker</div>
+                        <div>• 🔘 <b>Iron Armored</b>: Reinforced heavy hull</div>
+                        <div>• 👑 <b>Rooster Mothership</b>: Sector Boss with massive egg barrage!</div>
+                    </div>
+                </div>
+
+                <!-- Card 3: Power-Ups & Loot -->
+                <div class="briefing-card">
+                    <div class="briefing-card-title">⚡ ARSENAL & POWER-UPS</div>
+                    <div class="briefing-card-content powerup-list">
+                        <div>🛡️ <b>Shield</b>: 10s Impenetrable armor bubble</div>
+                        <div>⚡ <b>Rapid Fire</b>: 3x Plasma firing velocity</div>
+                        <div>🔥 <b>Dual Cannon</b>: Heavy twin destructive blast</div>
+                        <div>🍗 <b>Food & Gold</b>: Multiplier combo & extra lives</div>
+                    </div>
+                </div>
+
+                <!-- Card 4: Combat Tactics -->
+                <div class="briefing-card">
+                    <div class="briefing-card-title">🏆 TACTICS & SCORING</div>
+                    <div class="briefing-card-content">
+                        <div>• Chain kills without taking hits for <b>x2, x3, x4, x5 SUPER STREAKS</b>!</div>
+                        <div>• Don't let chickens touch bottom border</div>
+                        <div>• Submit scores to <b>Global Hall of Fame</b></div>
+                    </div>
+                </div>
+            </div>
+
+            <button id="btnLaunchMission" class="btn-primary" type="button" style="margin-top: 14px; padding: 14px 24px; font-size: 0.68rem; width: 100%; letter-spacing: 2px;">
+                🎮 PROCEED TO TITLE MENU
+            </button>
+        </div>
+    </div>
+
     <!-- Modal 2: Global Leaderboard View -->
     <div id="leaderboardModalBackdrop" class="modal-backdrop">
         <div class="modal-box leaderboard-box">
@@ -1929,13 +2337,17 @@
             }
         }
 
+        var wasmRuntimeReady = false;
+
         var Module = {
             preRun: [],
             onRuntimeInitialized: function() {
+                wasmRuntimeReady = true;
                 syncPlatformToWasm();
             },
             postRun: [function() {
                 if (loadingStatus) loadingStatus.style.display = 'none';
+                wasmRuntimeReady = true;
                 syncPlatformToWasm();
                 canvasElement.focus();
             }],
@@ -2507,7 +2919,27 @@
         }
 
         // Action Buttons
-        document.getElementById('btnOpenLeaderboard').addEventListener('click', openLeaderboardModal);
+        var btnOpenLeaderboard = document.getElementById('btnOpenLeaderboard');
+        if (btnOpenLeaderboard) btnOpenLeaderboard.addEventListener('click', openLeaderboardModal);
+        
+        var btnCabinetCenterScores = document.getElementById('btnCabinetCenterScores');
+        if (btnCabinetCenterScores) btnCabinetCenterScores.addEventListener('click', function(e) {
+            e.preventDefault();
+            openLeaderboardModal();
+        });
+
+        var btnMainLeaderboard = document.getElementById('btnMainLeaderboard');
+        if (btnMainLeaderboard) btnMainLeaderboard.addEventListener('click', function(e) {
+            e.preventDefault();
+            openLeaderboardModal();
+        });
+
+        var btnCabinetLeaderboard = document.getElementById('btnCabinetLeaderboard');
+        if (btnCabinetLeaderboard) btnCabinetLeaderboard.addEventListener('click', function(e) {
+            e.preventDefault();
+            openLeaderboardModal();
+        });
+
         document.getElementById('btnRefreshScores').addEventListener('click', fetchLeaderboard);
         document.getElementById('btnCloseLeaderboard').addEventListener('click', closeLeaderboardModal);
         document.getElementById('btnCloseLeaderboardBottom').addEventListener('click', closeLeaderboardModal);
@@ -2584,6 +3016,77 @@
             }
             btnPauseQuit.addEventListener('touchstart', handleQuit, { passive: false });
             btnPauseQuit.addEventListener('click', handleQuit);
+        }
+
+        // ================================================================
+        // RETRO LOADER (SPACESHIP 0-100%) & MISSION BRIEFING CONTROLLER
+        // ================================================================
+        var loadingOverlay = document.getElementById('loadingOverlay');
+        var loadingShipWrapper = document.getElementById('loadingShipWrapper');
+        var loadingBarInner = document.getElementById('loadingBarInner');
+        var loadingPercent = document.getElementById('loadingPercent');
+        var loadingSubtext = document.getElementById('loadingSubtext');
+        var briefingModalBackdrop = document.getElementById('briefingModalBackdrop');
+        var btnLaunchMission = document.getElementById('btnLaunchMission');
+
+        var loaderProgress = 0;
+        var loaderInterval = setInterval(function() {
+            var step = (wasmRuntimeReady && loaderProgress > 65) ? 3.0 : (loaderProgress > 85 ? 0.7 : 1.5);
+            loaderProgress = Math.min(100, loaderProgress + step);
+
+            if (loadingShipWrapper) loadingShipWrapper.style.left = loaderProgress + '%';
+            if (loadingBarInner) loadingBarInner.style.width = loaderProgress + '%';
+            if (loadingPercent) loadingPercent.textContent = Math.floor(loaderProgress) + '%';
+
+            if (loadingSubtext) {
+                if (loaderProgress < 25) {
+                    loadingSubtext.textContent = 'INITIALIZING DEFENSE SYSTEMS...';
+                } else if (loaderProgress < 50) {
+                    loadingSubtext.textContent = 'CALIBRATING ION THRUSTERS...';
+                } else if (loaderProgress < 75) {
+                    loadingSubtext.textContent = 'CHARGING PHOTON CANNONS...';
+                } else if (loaderProgress < 99) {
+                    loadingSubtext.textContent = 'SCANNING GALAXY FOR CHICKEN SQUADRONS...';
+                } else {
+                    loadingSubtext.textContent = 'SYSTEMS ONLINE // PILOT READY';
+                }
+            }
+
+            if (loaderProgress >= 100 && wasmRuntimeReady) {
+                clearInterval(loaderInterval);
+                setTimeout(function() {
+                    if (loadingOverlay) {
+                        loadingOverlay.classList.add('fade-out');
+                        setTimeout(function() {
+                            loadingOverlay.style.display = 'none';
+                        }, 500);
+                    }
+                    if (briefingModalBackdrop) {
+                        briefingModalBackdrop.classList.add('show');
+                        briefingModalBackdrop.style.display = 'flex';
+                    }
+                }, 400);
+            }
+        }, 32);
+
+        if (btnLaunchMission) {
+            function handleLaunch(e) {
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                if (briefingModalBackdrop) {
+                    briefingModalBackdrop.classList.remove('show');
+                    briefingModalBackdrop.style.display = 'none';
+                }
+                // Return cleanly to the Home / Title Screen (Menu) with game title and high scores
+                if (typeof Module !== 'undefined' && Module._wasm_restart_game) {
+                    Module._wasm_restart_game();
+                }
+                canvasElement.focus();
+            }
+            btnLaunchMission.addEventListener('touchstart', handleLaunch, { passive: false });
+            btnLaunchMission.addEventListener('click', handleLaunch);
         }
 
         // ================================================================
@@ -2986,19 +3489,40 @@
 
         bindTouchBtn(document.getElementById('btnFire'), function(){ setShooting(true); }, function(){ setShooting(false); });
 
-        // Desktop / PC Keyboard Support: Esc and E keys trigger Force Shoot identically
+        // Desktop / PC Keyboard Support: ONLY Spacebar shoots, Escape (Esc) & P toggle Pause/Resume
         window.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'e' || e.key === 'E') {
-                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) return;
+            if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
                 setShooting(true);
+            } else if (e.key === 'Escape' || e.key === 'Esc' || e.code === 'Escape' || e.keyCode === 27) {
+                e.preventDefault();
+                e.stopPropagation();
+                // If modal is open, close modal; otherwise toggle pause/resume
+                var lbModal = document.getElementById('leaderboardModalBackdrop');
+                var scoreModal = document.getElementById('scoreModalBackdrop');
+                if (lbModal && (lbModal.classList.contains('show') || lbModal.style.display === 'flex')) {
+                    lbModal.classList.remove('show');
+                    lbModal.style.display = 'none';
+                    return;
+                }
+                if (scoreModal && (scoreModal.classList.contains('show') || scoreModal.style.display === 'flex')) {
+                    scoreModal.classList.remove('show');
+                    scoreModal.style.display = 'none';
+                    return;
+                }
+                pressStart(); // Toggles Pause / Resume with debouncing in C++
+            } else if (e.key === 'p' || e.key === 'P' || e.code === 'KeyP' || e.keyCode === 80) {
+                e.preventDefault();
+                e.stopPropagation();
+                pressStart();
             }
-        });
+        }, true);
         window.addEventListener('keyup', function(e) {
-            if (e.key === 'Escape' || e.key === 'Esc' || e.key === 'e' || e.key === 'E') {
-                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+            if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'SELECT')) return;
+            if (e.code === 'Space' || e.key === ' ' || e.keyCode === 32) {
                 setShooting(false);
             }
-        });
+        }, true);
 
         var btnGamepadStart = document.getElementById('btnGamepadStart');
         if (btnGamepadStart) {

@@ -111,6 +111,7 @@ public:
 
     // Platform detection (Mobile vs Desktop)
     bool        isMobile;
+    float       lastPauseToggleTime;
 
     Game();
     ~Game();
@@ -119,6 +120,7 @@ public:
     void reset();
     void update();
     void display();
+    void togglePause();
     void checkEndGameNotification();
     void playSfx(const char* name);
 
