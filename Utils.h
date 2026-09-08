@@ -309,14 +309,46 @@ inline void drawRectOutline(float x,float y,float w,float h, const Color& c, flo
     glLineWidth(1.0f);
 }
 
-// Helper: draw filled circle quickly via GL triangle fan
-inline void drawCircle(float cx,float cy,float r, const Color& c, int segs=32){
+// Fast unit-circle lookup tables for high-performance WebGL rendering
+namespace CircleLUT {
+    inline const std::vector<std::pair<float,float>>& getPoints(int segs) {
+        static std::vector<std::pair<float,float>> lut8, lut12, lut16, lut22;
+        static bool init = false;
+        if (!init) {
+            auto makeLut = [](int s) {
+                std::vector<std::pair<float,float>> v;
+                v.reserve(s + 1);
+                for (int i = 0; i <= s; ++i) {
+                    float a = 2.0f * PI * i / s;
+                    v.push_back({std::cos(a), std::sin(a)});
+                }
+                return v;
+            };
+            lut8 = makeLut(8);
+            lut12 = makeLut(12);
+            lut16 = makeLut(16);
+            lut22 = makeLut(22);
+            init = true;
+        }
+        if (segs <= 8) return lut8;
+        if (segs <= 12) return lut12;
+        if (segs <= 16) return lut16;
+        return lut22;
+    }
+}
+
+// Helper: draw filled circle quickly via GL triangle fan using precomputed LUT
+inline void drawCircle(float cx,float cy,float r, const Color& c, int segs=0){
+    if (r <= 0.0f) return;
+    if (segs <= 0) {
+        segs = (r <= 5.0f) ? 8 : (r <= 14.0f) ? 12 : (r <= 28.0f) ? 16 : 22;
+    }
+    const auto& pts = CircleLUT::getPoints(segs);
     c.apply();
     glBegin(GL_TRIANGLE_FAN);
         glVertex2f(cx,cy);
-        for(int i=0;i<=segs;i++){
-            float a=2.0f*PI*i/segs;
-            glVertex2f(cx+r*std::cos(a), cy+r*std::sin(a));
+        for (const auto& pt : pts) {
+            glVertex2f(cx + r * pt.first, cy + r * pt.second);
         }
     glEnd();
 }
