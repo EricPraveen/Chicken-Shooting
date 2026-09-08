@@ -44,6 +44,7 @@ extern "C" {
 // ---------------------------------------------------------------------------
 Game::Game()
     : state(GameState::MENU), level(1), globalTime(0),
+      comboStreak(0), comboMultiplier(1), comboTimer(0),
       boss(nullptr), bossSpawned(false),
       enemySpawnTimer(0), enemySpawnRate(120),
       powerupTimer(0), coinTimer(0),
@@ -84,10 +85,14 @@ void Game::reset(){
     coins.clear();
     foods.clear();
     particles.clear();
+    floatingTexts.clear();
     delete boss; boss=nullptr;
     bossSpawned=false;
     bossWarningActive=false;
     bossWarningTimer=0;
+    comboStreak=0;
+    comboMultiplier=1;
+    comboTimer=0;
     level=1;
     globalTime=0;
     enemySpawnTimer=0;
@@ -195,6 +200,48 @@ void Game::spawnExplosion(float x, float y, Color c, int count){
 }
 
 // ---------------------------------------------------------------------------
+// Floating score / popup text
+// ---------------------------------------------------------------------------
+void Game::spawnFloatingText(float x, float y, const std::string& txt, Color c, float scale){
+    floatingTexts.emplace_back(x, y, txt, c, scale);
+}
+
+// ---------------------------------------------------------------------------
+// Combo / Streak system
+// ---------------------------------------------------------------------------
+void Game::updateCombo(){
+    comboStreak++;
+    comboTimer = comboMaxTimer; // ~3.0 seconds
+    int oldMult = comboMultiplier;
+    if(comboStreak >= 20) comboMultiplier = 5;
+    else if(comboStreak >= 15) comboMultiplier = 4;
+    else if(comboStreak >= 10) comboMultiplier = 3;
+    else if(comboStreak >= 5) comboMultiplier = 2;
+    else comboMultiplier = 1;
+
+    // Fanfare on tier level-up!
+    if(comboMultiplier > oldMult){
+        playSfx("powerup");
+        if(comboMultiplier >= 5){
+            uiMessage = "★ SUPER STREAK! x5 MULTIPLIER ★";
+            uiMessageTimer = 120;
+        } else {
+            uiMessage = "COMBO x" + std::to_string(comboMultiplier) + "!";
+            uiMessageTimer = 80;
+        }
+    }
+}
+
+void Game::resetCombo(bool showLostText){
+    if(comboMultiplier > 1 && showLostText){
+        spawnFloatingText(player.x, player.y + 25, "COMBO LOST!", Color(1.0f, 0.25f, 0.25f), 1.4f);
+    }
+    comboStreak = 0;
+    comboMultiplier = 1;
+    comboTimer = 0;
+}
+
+// ---------------------------------------------------------------------------
 // Boss Warning and Spawn
 // ---------------------------------------------------------------------------
 void Game::triggerBossWarning(){
@@ -232,7 +279,17 @@ void Game::handleBulletCollisions(){
                 e.takeDamage(b.damage);
                 if(!e.active){
                     playSfx("explosion");
-                    player.score += e.getCoinValue()*2;
+                    updateCombo();
+                    int earned = e.getCoinValue() * 2 * comboMultiplier;
+                    player.score += earned;
+                    std::string scoreTxt = "+" + std::to_string(earned);
+                    if(comboMultiplier > 1) {
+                        scoreTxt += " (x" + std::to_string(comboMultiplier) + ")";
+                    }
+                    Color txtCol = (comboMultiplier >= 5) ? Color(1.0f, 0.25f, 0.45f) :
+                                   (comboMultiplier >= 3) ? Color(1.0f, 0.85f, 0.2f) :
+                                                            Color(0.3f, 1.0f, 0.45f);
+                    spawnFloatingText(e.x, e.y, scoreTxt, txtCol, comboMultiplier > 1 ? 1.45f : 1.25f);
                     spawnExplosion(e.x, e.y, Color(1,0.6f,0.1f));
                     // Drop coin
                     if(rand()%100 < 70)
@@ -263,6 +320,7 @@ void Game::handleBulletCollisions(){
             if(!boss->active){
                 playSfx("explosion");
                 player.score += 500;
+                spawnFloatingText(boss->x, boss->y + 30, "+500 BOSS!", Color(1.0f, 0.85f, 0.2f), 1.8f);
                 spawnExplosion(boss->x, boss->y, Color(1,0.5f,0), 60);
                 spawnExplosion(boss->x-30, boss->y+20, Color(1,0.8f,0), 40);
                 spawnExplosion(boss->x+30, boss->y-20, Color(0.8f,0.2f,1), 40);
@@ -284,6 +342,7 @@ void Game::handleEggCollisions(){
         if(eg.getAABB().intersects(pa)){
             eg.active=false;
             player.takeDamage(10);
+            resetCombo(true);
             playSfx("hurt");
             spawnExplosion(eg.x, eg.y, Color(0.9f,0.9f,0.6f), 10);
         }
@@ -297,6 +356,7 @@ void Game::handleEggCollisions(){
         // Boss laser damage
         if(boss->isPlayerInLaser(player.x, player.y)){
             player.takeDamage(2);
+            resetCombo(true);
         }
     }
 }
@@ -314,6 +374,7 @@ void Game::handlePickups(){
             player.coins += c.value;
             player.score += c.value;
             playSfx("coin");
+            spawnFloatingText(c.x, c.y, "+" + std::to_string(c.value), Color(1.0f, 0.88f, 0.25f), 1.3f);
             spawnExplosion(c.x,c.y,Color(1,0.9f,0.1f),6);
         }
     }
@@ -333,6 +394,7 @@ void Game::handlePickups(){
                     player.score += 200;
                     uiMessage="\xE2\x98\x85 EXTRA LIFE! +200 PTS \xE2\x98\x85";
                     uiMessageTimer=200;
+                    spawnFloatingText(player.x, player.y + 35, "+200 LIFE!", Color(0.35f, 1.0f, 0.5f), 1.6f);
                     // Triple burst for life gain
                     spawnExplosion(player.x,    player.y,    Color(1.0f,1.0f,0.3f),30);
                     spawnExplosion(player.x-25, player.y+10, Color(0.3f,1.0f,0.3f),15);
@@ -341,10 +403,12 @@ void Game::handlePickups(){
                     uiMessage="Lives FULL! +250 PTS";
                     uiMessageTimer=130;
                     player.score += 250;
+                    spawnFloatingText(player.x, player.y + 35, "+250 MAX!", Color(1.0f, 0.85f, 0.2f), 1.6f);
                     spawnExplosion(player.x, player.y, Color(1,0.9f,0.1f),20);
                 }
             } else {
                 playSfx("coin");
+                spawnFloatingText(f.x, f.y, "+30", Color(0.35f, 0.95f, 1.0f), 1.3f);
                 int rem = Player::foodForLife - player.foodCollected;
                 uiMessage="Food! +30 PTS ("+std::to_string(rem)+" more for LIFE)";
                 uiMessageTimer=100;
@@ -358,20 +422,25 @@ void Game::handlePickups(){
             p.active=false;
             player.score += 50;
             playSfx("powerup");
+            std::string pTxt = "+50 ";
             switch(p.type){
                 case PowerUpType::FIRE_RATE:
                     player.activateFireRate();
+                    pTxt += "RAPID";
                     uiMessage="FIRE RATE UP! +50 PTS"; uiMessageTimer=120;
                     break;
                 case PowerUpType::SHIELD:
                     player.activateShield();
+                    pTxt += "SHIELD";
                     uiMessage="SHIELD ACTIVE! +50 PTS"; uiMessageTimer=120;
                     break;
                 case PowerUpType::STRONG_BULLET:
                     player.activateStrongBullet();
+                    pTxt += "STRONG";
                     uiMessage="STRONG BULLETS! +50 PTS"; uiMessageTimer=120;
                     break;
             }
+            spawnFloatingText(p.x, p.y, pTxt, Color(0.4f, 1.0f, 0.9f), 1.4f);
             spawnExplosion(p.x,p.y,Color(0.5f,1,1),12);
         }
     }
@@ -438,6 +507,19 @@ void Game::update(){
     particles.erase(std::remove_if(particles.begin(),particles.end(),
         [](const Particle& p){ return !p.active; }), particles.end());
 
+    // Floating score / popup texts
+    for(auto& ft : floatingTexts) ft.update();
+    floatingTexts.erase(std::remove_if(floatingTexts.begin(), floatingTexts.end(),
+        [](const FloatingText& ft){ return !ft.active; }), floatingTexts.end());
+
+    // Combo timer decay
+    if(comboTimer > 0){
+        comboTimer--;
+        if(comboTimer <= 0){
+            resetCombo(false);
+        }
+    }
+
     // Collisions
     handleBulletCollisions();
     handleEggCollisions();
@@ -476,6 +558,7 @@ void Game::update(){
     // Enemy reaches bottom → game over
     for(auto& e : enemies){
         if(e.active && e.y < 50){
+            resetCombo(false);
             state=GameState::GAME_OVER;
             checkEndGameNotification();
             return;
@@ -485,6 +568,7 @@ void Game::update(){
     // Player dead — lose a life or end the game
     if(player.hp <= 0 && player.respawnTimer <= 0){
         playSfx("hurt");
+        resetCombo(false);
         if(player.lives > 0){
             player.lives--;
             player.hp = player.maxHp;
@@ -511,7 +595,7 @@ void Game::nextLevel(){
     level++;
     delete boss; boss=nullptr; bossSpawned=false;
     bossWarningActive=false; bossWarningTimer=0;
-    enemies.clear(); coins.clear(); foods.clear(); powerups.clear();
+    enemies.clear(); coins.clear(); foods.clear(); powerups.clear(); floatingTexts.clear();
     enemySpawnRate = std::max(60, 120 - level*15);
     uiMessage = "LEVEL " + std::to_string(level) + " !";
     uiMessageTimer = 180;
@@ -1131,6 +1215,95 @@ void Game::drawBossWarning(){
 }
 
 // ---------------------------------------------------------------------------
+// Floating score / popup texts rendering
+// ---------------------------------------------------------------------------
+void Game::drawFloatingTexts(){
+    if(floatingTexts.empty()) return;
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    for(const auto& ft : floatingTexts){
+        if(!ft.active) continue;
+        float alpha = ft.life / ft.maxLife;
+        if(alpha > 1.0f) alpha = 1.0f;
+        if(alpha < 0.0f) alpha = 0.0f;
+        Color c = ft.color;
+        c.a *= alpha;
+
+        float charW = ft.scale * 6.5f;
+        float tw = (float)ft.text.length() * charW;
+        float drawX = ft.x - tw / 2.0f;
+        float drawY = ft.y;
+
+#ifdef __EMSCRIPTEN__
+        renderArcadeTextWithShadow(drawX, drawY, ft.text, c, ft.scale, 1.2f, Color(0.0f, 0.0f, 0.0f, 0.7f * alpha));
+#else
+        drawText(drawX, drawY, ft.text, c);
+#endif
+    }
+    glDisable(GL_BLEND);
+}
+
+// ---------------------------------------------------------------------------
+// Combo / Streak HUD badge rendering
+// ---------------------------------------------------------------------------
+void Game::drawComboHUD(){
+    if(comboStreak < 3 && comboMultiplier <= 1) return;
+
+    float t = globalTime;
+    float pulse = 0.85f + 0.15f * std::sin(t * 12.0f);
+
+    Color badgeCol;
+    Color glowCol;
+    std::string streakText;
+    if(comboMultiplier >= 5){
+        badgeCol = Color(1.0f, 0.20f, 0.35f);  // Neon Crimson
+        glowCol  = Color(1.0f, 0.85f, 0.20f);  // Gold glow
+        streakText = "SUPER x" + std::to_string(comboMultiplier) + "!";
+    } else if(comboMultiplier == 4){
+        badgeCol = Color(1.0f, 0.55f, 0.05f);  // Fiery Orange
+        glowCol  = Color(1.0f, 0.90f, 0.20f);
+        streakText = "COMBO x4";
+    } else if(comboMultiplier == 3){
+        badgeCol = Color(0.95f, 0.85f, 0.10f); // Electric Yellow
+        glowCol  = Color(1.0f, 1.0f, 0.40f);
+        streakText = "COMBO x3";
+    } else if(comboMultiplier == 2){
+        badgeCol = Color(0.20f, 0.90f, 1.00f); // Bright Cyan
+        glowCol  = Color(0.00f, 0.60f, 1.00f);
+        streakText = "COMBO x2";
+    } else {
+        badgeCol = Color(0.70f, 0.75f, 0.95f); // Streak building (3-4 kills)
+        glowCol  = Color(0.35f, 0.45f, 0.85f);
+        streakText = "STREAK " + std::to_string(comboStreak);
+    }
+
+    float bx = 12.0f;
+    float by = WIN_H - 33.0f;
+    float bw = 114.0f;
+    float bh = 24.0f;
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    // Background pill badge
+    drawRect(bx, by, bw, bh, Color(0.04f, 0.05f, 0.12f, 0.85f));
+    drawRectOutline(bx, by, bw, bh, Color(badgeCol.r, badgeCol.g, badgeCol.b, pulse), 1.5f);
+
+    // Mini timer countdown gauge inside the badge bottom
+    float timerFrac = (float)comboTimer / (float)comboMaxTimer;
+    if(timerFrac > 0.0f){
+        drawRect(bx + 3, by + 2, (bw - 6) * timerFrac, 3, Color(glowCol.r, glowCol.g, glowCol.b, 0.95f));
+    }
+    glDisable(GL_BLEND);
+
+#ifdef __EMSCRIPTEN__
+    renderArcadeTextGlow(bx + 8, by + 8, streakText, badgeCol, 1.4f, glowCol, 0.35f * pulse);
+#else
+    drawText(bx + 8, by + 8, streakText, badgeCol);
+#endif
+}
+
+// ---------------------------------------------------------------------------
 // display — CG Concept 13: Double Buffering
 // The scene is drawn into the BACK buffer.  glutSwapBuffers() atomically
 // swaps it to the front, preventing screen tearing.
@@ -1178,6 +1351,8 @@ void Game::display(){
             glDisable(GL_BLEND);
 
             drawHUD();
+            drawComboHUD();
+            drawFloatingTexts();
 
             if(bossWarningActive) drawBossWarning();
 
