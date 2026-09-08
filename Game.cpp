@@ -1027,7 +1027,7 @@ void Game::drawMenu(){
     // ── "PRESS ENTER" — classic arcade blinking ──────────────────────────────
     float blinkA = 0.45f + 0.55f * std::abs(std::sin(t * 2.8f));
 #ifdef __EMSCRIPTEN__
-    renderArcadeTextGlow(WIN_W/2-130, WIN_H/2+18, "PRESS ENTER TO START",
+    renderArcadeTextGlow(WIN_W/2-138, WIN_H/2+18, "PRESS START OR ENTER",
         Color(1.0f,1.0f,1.0f,blinkA), 1.7f,
         Color(0.2f,0.8f,1.0f,blinkA), 0.22f*blinkA);
     // Controls — dimmer secondary info
@@ -1070,22 +1070,24 @@ void Game::drawPauseScreen(){
     glDisable(GL_BLEND);
 
     // Retro pause box (charcoal with arcade green borders)
-    float bx=WIN_W/2-140, by=WIN_H/2-50;
-    drawRect(bx, by, 280, 100, Color(0.04f,0.08f,0.06f,0.95f));
-    drawRectOutline(bx, by, 280, 100, Color(0.0f,0.85f,0.45f,0.85f), 2.0f);
+    float bx=WIN_W/2-150, by=WIN_H/2-55;
+    drawRect(bx, by, 300, 110, Color(0.04f,0.08f,0.06f,0.95f));
+    drawRectOutline(bx, by, 300, 110, Color(0.0f,0.85f,0.45f,0.85f), 2.0f);
     // Inner border
-    drawRectOutline(bx+4, by+4, 272, 92, Color(0.0f,0.45f,0.25f,0.50f), 1.0f);
+    drawRectOutline(bx+4, by+4, 292, 102, Color(0.0f,0.45f,0.25f,0.50f), 1.0f);
     // Corner dots
     drawCircle(bx+5,   by+5,   3, Color(0.0f,0.95f,0.55f));
-    drawCircle(bx+275, by+5,   3, Color(0.0f,0.95f,0.55f));
-    drawCircle(bx+5,   by+95,  3, Color(0.0f,0.95f,0.55f));
-    drawCircle(bx+275, by+95,  3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+295, by+5,   3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+5,   by+105, 3, Color(0.0f,0.95f,0.55f));
+    drawCircle(bx+295, by+105, 3, Color(0.0f,0.95f,0.55f));
 
 #ifdef __EMSCRIPTEN__
-    renderArcadeTextOutlined(WIN_W/2-60, WIN_H/2+22, "PAUSED",
+    renderArcadeTextOutlined(WIN_W/2-60, WIN_H/2+26, "PAUSED",
         Color(0.0f,0.95f,0.55f), 2.4f, Color(0.0f,0.25f,0.12f,0.9f));
-    renderArcadeText(WIN_W/2-126, WIN_H/2-12, "[P] RESUME  [Q] MENU",
-        Color(0.75f,0.88f,0.80f,0.88f), 1.4f);
+    renderArcadeText(WIN_W/2-132, WIN_H/2-6, "TAP START / PAUSE TO RESUME",
+        Color(0.75f,0.90f,0.80f,0.92f), 1.35f);
+    renderArcadeText(WIN_W/2-84, WIN_H/2-28, "P: RESUME  |  Q: MENU",
+        Color(0.40f,0.65f,0.50f,0.70f), 1.1f);
 #else
     drawTextLarge(WIN_W/2-50, WIN_H/2+20,"PAUSED", Color(0.0f,0.95f,0.55f));
     drawText(WIN_W/2-80, WIN_H/2-10,"[P] Resume  |  [Q] Quit to Menu", Color(0.8f,0.8f,0.8f));
@@ -1136,9 +1138,9 @@ void Game::drawGameOver(){
     renderArcadeTextWithShadow(WIN_W/2-80, WIN_H/2+1,
         "SCORE "+std::to_string(finalScore),
         Color(0.20f,0.95f,0.85f), 1.7f, 1.5f);
-    // Blinking "PRESS ENTER"
+    // Blinking "PRESS START OR ENTER"
     float ba = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
-    renderArcadeText(WIN_W/2-128, WIN_H/2-22, "PRESS ENTER TO CONTINUE",
+    renderArcadeText(WIN_W/2-138, WIN_H/2-22, "PRESS START OR ENTER",
         Color(0.62f,0.60f,0.70f,ba), 1.4f);
 #else
     drawTextLarge(WIN_W/2-100, WIN_H/2+30,"GAME OVER", Color(0.9f,0.1f,0.1f,textPulse));
@@ -1193,7 +1195,7 @@ void Game::drawWinScreen(){
         Color(1.0f,0.70f,0.20f), 1.6f, 1.2f);
     // Blinking continue
     float baWin = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
-    renderArcadeText(WIN_W/2-128, WIN_H/2-32, "PRESS ENTER TO CONTINUE",
+    renderArcadeText(WIN_W/2-138, WIN_H/2-32, "PRESS START OR ENTER",
         Color(0.55f,0.78f,0.55f,baWin), 1.4f);
 #else
     drawTextLarge(WIN_W/2-100, WIN_H/2+40, "YOU WIN!", Color(0.2f,1.0f,0.3f));

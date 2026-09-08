@@ -1244,16 +1244,19 @@
             background: linear-gradient(180deg, #1f2937 0%, #111827 100%);
             border: 1px solid #374151;
             color: #fbbf24;
-            padding: 7px 14px;
+            padding: 8px 16px;
+            min-height: 34px;
             border-radius: 20px;
             cursor: pointer;
             display: inline-flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
             box-shadow: 0 4px 8px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.15);
-            touch-action: none;
+            touch-action: manipulation;
             user-select: none;
             -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
             transition: all 0.1s;
         }
         .gamepad-pill-btn:active, .gamepad-pill-btn.pressed {
@@ -2820,9 +2823,21 @@
 
         var btnGamepadStart = document.getElementById('btnGamepadStart');
         if (btnGamepadStart) {
+            var lastStartTapTime = 0;
             function handleStartTap(e) {
-                e.preventDefault();
-                e.stopPropagation();
+                if (e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                var now = Date.now();
+                if (now - lastStartTapTime < 350) return; // Prevent double trigger from touchstart + click
+                lastStartTapTime = now;
+
+                btnGamepadStart.classList.add('pressed');
+                setTimeout(function() {
+                    btnGamepadStart.classList.remove('pressed');
+                }, 150);
+
                 pressStart();
             }
             btnGamepadStart.addEventListener('touchstart', handleStartTap, { passive: false });
