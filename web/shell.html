@@ -3138,6 +3138,18 @@
 
             var lastLaserTime = 0;
 
+            // Auto-cleanup: disconnect audio nodes from destination when sound finishes
+            function autoCleanup(nodeList, triggerNode) {
+                var trigger = triggerNode || (nodeList && nodeList[0]);
+                if (trigger) {
+                    trigger.onended = function() {
+                        for (var i = 0; i < nodeList.length; i++) {
+                            try { nodeList[i].disconnect(); } catch(e){}
+                        }
+                    };
+                }
+            }
+
             return {
                 setEnabled: function(val) {
                     enabled = !!val;
@@ -3182,6 +3194,9 @@
                     click.start(now);
                     osc.stop(now + 0.055);
                     click.stop(now + 0.015);
+
+                    autoCleanup([osc, gain], osc);
+                    autoCleanup([click, clickGain], click);
                 },
                 // 2. Chicken Squawk / Hit
                 playChickenHit: function() {
@@ -3200,6 +3215,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.10);
+                    autoCleanup([osc, gain], osc);
                 },
                 // 3. Crunchy 8-bit Explosion using cached noise buffer
                 playExplosion: function() {
@@ -3222,6 +3238,8 @@
                     filter.connect(gain);
                     gain.connect(c.destination);
                     noise.start(now);
+                    noise.stop(now + 0.22);
+                    autoCleanup([noise, filter, gain], noise);
 
                     // Low frequency punch
                     var sub = c.createOscillator();
@@ -3235,6 +3253,7 @@
                     subGain.connect(c.destination);
                     sub.start(now);
                     sub.stop(now + 0.18);
+                    autoCleanup([sub, subGain], sub);
                 },
                 // 4. Coin Ding (B5 -> E6)
                 playCoin: function() {
@@ -3252,6 +3271,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.25);
+                    autoCleanup([osc, gain], osc);
                 },
                 // 5. Power-Up Fanfare (C5 -> E5 -> G5 -> C6)
                 playPowerup: function() {
@@ -3271,6 +3291,7 @@
                         g.connect(c.destination);
                         o.start(start);
                         o.stop(start + 0.12);
+                        autoCleanup([o, g], o);
                     });
                 },
                 // 6. Extra Life Fanfare (Classic 6-tone retro jingle)
@@ -3291,6 +3312,7 @@
                         g.connect(c.destination);
                         o.start(start);
                         o.stop(start + 0.14);
+                        autoCleanup([o, g], o);
                     });
                 },
                 // 7. Player Hurt
@@ -3309,6 +3331,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.20);
+                    autoCleanup([osc, gain], osc);
                 },
                 // 8. Warning Siren
                 playWarningSiren: function() {
@@ -3327,6 +3350,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.32);
+                    autoCleanup([osc, gain], osc);
                 },
                 // 9. Boss Roar
                 playBossRoar: function() {
@@ -3345,6 +3369,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.60);
+                    autoCleanup([osc, gain], osc);
                 },
                 // 10. Boss Laser Beam
                 playBossLaser: function() {
@@ -3363,6 +3388,7 @@
                     gain.connect(c.destination);
                     osc.start(now);
                     osc.stop(now + 0.24);
+                    autoCleanup([osc, gain], osc);
                 }
             };
         })();

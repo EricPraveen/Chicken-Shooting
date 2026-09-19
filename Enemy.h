@@ -121,6 +121,15 @@ struct Enemy {
     }
 
     void update(){
+        // If enemy is dead, do not move or lay new eggs;
+        // only update and clean up already-dropped eggs so they fall all the way down.
+        if(!active){
+            for(auto& e : eggs) e.update();
+            eggs.erase(std::remove_if(eggs.begin(),eggs.end(),
+                [](const Egg& e){ return !e.active; }), eggs.end());
+            return;
+        }
+
         animTime += 0.028f * speed;
 
         // CG Concept 14: Keyframe Animation — natural wing flap
@@ -552,6 +561,9 @@ struct Enemy {
     }
 
     void draw() const {
+        // Always draw any eggs currently in flight, even if the chicken is dead
+        for(auto& e : eggs) e.draw();
+
         if(!active) return;
         // Don't render while waiting off-screen
         if(y > WIN_H + 35.0f || x < -55.0f || x > WIN_W + 55.0f) return;
@@ -563,7 +575,6 @@ struct Enemy {
             case EnemyType::ARMORED: drawArmoredChicken(flash); break;
         }
         drawHpBar();
-        for(auto& e : eggs) e.draw();
     }
 
     void takeDamage(int dmg){
