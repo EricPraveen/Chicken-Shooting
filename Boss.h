@@ -199,58 +199,84 @@ struct Boss {
 
         // Pulsing alpha for the dashes
         float pulse = 0.50f + 0.50f * std::abs(std::sin(animTime * 14.0f));
-        Color dashCol(1.0f, 0.55f + 0.25f*pulse, 0.0f, 0.75f * pulse);
-        Color dotCol (1.0f, 0.90f,               0.2f, 0.50f * pulse);
+        Color dashCol(1.0f, 0.55f + 0.25f*pulse, 0.0f, 0.85f * pulse);
+        Color dotCol (1.0f, 0.90f,               0.2f, 0.60f * pulse);
 
-        // Draw dashed segments using Bresenham: 12 px ON, 10 px OFF
         float totalLen = std::sqrt((ex-x)*(ex-x)+(ey-y)*(ey-y));
         if(totalLen < 1) return;
-        float dashLen = 12.0f, gapLen = 10.0f, segCycle = dashLen+gapLen;
+        float dashLen = 14.0f, gapLen = 10.0f, segCycle = dashLen+gapLen;
+
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        glLineWidth(2.5f);
+        dashCol.apply();
+        glBegin(GL_LINES);
         float t = 0;
         while(t < totalLen){
             float t1 = t;
             float t2 = std::min(t + dashLen, totalLen);
-            int sx1=(int)(x+(t1/totalLen)*(ex-x)), sy1=(int)(y+(t1/totalLen)*(ey-y));
-            int sx2=(int)(x+(t2/totalLen)*(ex-x)), sy2=(int)(y+(t2/totalLen)*(ey-y));
-            bresenhamLine(sx1,sy1,sx2,sy2, dashCol);
-            // Small dot at dash start for visibility
-            drawCircle(sx1,sy1,2.2f, dotCol);
+            float sx1 = x + (t1/totalLen)*(ex-x);
+            float sy1 = y + (t1/totalLen)*(ey-y);
+            float sx2 = x + (t2/totalLen)*(ex-x);
+            float sy2 = y + (t2/totalLen)*(ey-y);
+            glVertex2f(sx1, sy1);
+            glVertex2f(sx2, sy2);
             t += segCycle;
         }
+        glEnd();
+        glLineWidth(1.0f);
+
         // Arrowhead tip dot
         drawCircle(ex, ey, 4.5f * pulse, Color(1.0f,0.8f,0.0f,0.8f*pulse));
     }
 
     // ── Draw a SOLID firing beam along one angle ──────────────────────────────
-    // Three-layer: soft outer glow (DDA) + mid glow (DDA) + core (Bresenham)
+    // Three-layer glowing energy beam: outer plasma + mid flare + hot core
     void drawFiringBeam(float angle) const {
         float ex  = x + beamLength * std::cos(angle);
         float ey  = y + beamLength * std::sin(angle);
         float flk = 0.70f + 0.30f * std::sin(animTime * 30.0f);
 
-        // Perpendicular offsets for glow layers
+        // Perpendicular unit offsets for beam width
         float nx = -std::sin(angle), ny = std::cos(angle);
 
-        // Outer wide glow (DDA)
-        ddaLine((int)(x+nx*7),(int)(y+ny*7),(int)(ex+nx*7),(int)(ey+ny*7),
-                Color(1.0f,0.15f,0.0f, 0.18f*flk));
-        ddaLine((int)(x-nx*7),(int)(y-ny*7),(int)(ex-nx*7),(int)(ey-ny*7),
-                Color(1.0f,0.15f,0.0f, 0.18f*flk));
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        // Mid glow (DDA)
-        ddaLine((int)(x+nx*3),(int)(y+ny*3),(int)(ex+nx*3),(int)(ey+ny*3),
-                Color(1.0f,0.40f,0.10f, 0.50f*flk));
-        ddaLine((int)(x-nx*3),(int)(y-ny*3),(int)(ex-nx*3),(int)(ey-ny*3),
-                Color(1.0f,0.40f,0.10f, 0.50f*flk));
+        // 1. Soft Outer Plasma Glow (wide, transparent red-orange)
+        Color outerCol(1.0f, 0.20f, 0.05f, 0.22f * flk);
+        outerCol.apply();
+        glBegin(GL_QUADS);
+            glVertex2f(x  - nx*9.0f, y  - ny*9.0f);
+            glVertex2f(x  + nx*9.0f, y  + ny*9.0f);
+            glVertex2f(ex + nx*9.0f, ey + ny*9.0f);
+            glVertex2f(ex - nx*9.0f, ey - ny*9.0f);
+        glEnd();
 
-        // Core beam — Bresenham (CG Concept 3)
-        bresenhamLine((int)x,(int)y,(int)ex,(int)ey,
-                      Color(1.0f, 0.88f*flk, 0.65f*flk));
+        // 2. Mid Energy Flare (amber-gold)
+        Color midCol(1.0f, 0.55f, 0.10f, 0.55f * flk);
+        midCol.apply();
+        glBegin(GL_QUADS);
+            glVertex2f(x  - nx*4.5f, y  - ny*4.5f);
+            glVertex2f(x  + nx*4.5f, y  + ny*4.5f);
+            glVertex2f(ex + nx*4.5f, ey + ny*4.5f);
+            glVertex2f(ex - nx*4.5f, ey - ny*4.5f);
+        glEnd();
+
+        // 3. Core Laser White-Hot Filament
+        Color coreCol(1.0f, 0.95f, 0.85f, 0.95f * flk);
+        coreCol.apply();
+        glBegin(GL_QUADS);
+            glVertex2f(x  - nx*1.8f, y  - ny*1.8f);
+            glVertex2f(x  + nx*1.8f, y  + ny*1.8f);
+            glVertex2f(ex + nx*1.8f, ey + ny*1.8f);
+            glVertex2f(ex - nx*1.8f, ey - ny*1.8f);
+        glEnd();
 
         // Origin flash circle (Midpoint Circle — CG Concept 4)
-        drawCircle(x, y, 11.0f*flk, Color(1.0f, 0.40f, 0.0f, 0.60f*flk));
+        drawCircle(x, y, 12.0f*flk, Color(1.0f, 0.40f, 0.0f, 0.70f*flk));
         // End point glow
-        drawCircle(ex, ey, 6.0f*flk, Color(1.0f, 0.60f, 0.2f, 0.40f*flk));
+        drawCircle(ex, ey, 7.0f*flk, Color(1.0f, 0.60f, 0.2f, 0.50f*flk));
     }
 
     void drawAllBeams() const {
