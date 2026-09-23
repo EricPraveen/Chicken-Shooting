@@ -69,6 +69,7 @@ public:
     GameState   state;
     int         level;
     float       globalTime;
+    float       playTime;
 
     Player      player;
     std::vector<Enemy>   enemies;

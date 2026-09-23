@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   player_name TEXT NOT NULL CHECK (char_length(player_name) BETWEEN 1 AND 25),
   score BIGINT NOT NULL CHECK (score >= 0),
   country TEXT DEFAULT '🌍',
+  time_taken_seconds INT DEFAULT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
 
@@ -37,3 +38,4 @@ CREATE INDEX IF NOT EXISTS idx_leaderboard_country_score ON leaderboard (country
 -- MIGRATION: If your table already exists, run this in Supabase SQL Editor:
 -- =============================================================================
 -- ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS country TEXT DEFAULT '🌍';
+-- ALTER TABLE leaderboard ADD COLUMN IF NOT EXISTS time_taken_seconds INT DEFAULT NULL;
