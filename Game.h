@@ -109,6 +109,14 @@ public:
     bool        bossWarningActive;
     int         bossWarningTimer;
 
+    // Boss Loot & Collection Window
+    bool        bossLootActive;
+    int         bossLootTimer;
+    int         bossLootSpawnTimer;
+    int         bossLootPowerupsToSpawn;
+    int         bossLootFoodsToSpawn;
+    int         bossLootCoinsToSpawn;
+
     // Platform detection (Mobile vs Desktop)
     bool        isMobile;
     float       lastPauseToggleTime;
