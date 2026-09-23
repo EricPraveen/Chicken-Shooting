@@ -98,7 +98,7 @@ extern "C" {
 // Constructor / Destructor
 // ---------------------------------------------------------------------------
 Game::Game()
-    : state(GameState::MENU), level(1), globalTime(0),
+    : state(GameState::MENU), level(1), globalTime(0), playTime(0),
       comboStreak(0), comboMultiplier(1), comboTimer(0),
       boss(nullptr), bossSpawned(false), waveSpawned(false),
       enemySpawnTimer(0), enemySpawnRate(120),
@@ -181,6 +181,7 @@ void Game::reset(){
     comboTimer=0;
     level=1;
     globalTime=0;
+    playTime=0;
     enemySpawnTimer=0;
     enemySpawnRate=120;
     powerupTimer=0;
@@ -200,12 +201,13 @@ void Game::checkEndGameNotification(){
         int coinBonus = player.coins * 2;
         int baseCombatScore = player.score;
         int totalFinalScore = baseCombatScore + livesBonus + coinBonus;
+        int timeTakenSec = (int)playTime;
 #ifdef __EMSCRIPTEN__
         EM_ASM({
             if (window.onGameFinished) {
-                window.onGameFinished($0, $1, $2, $3, $4, $5);
+                window.onGameFinished($0, $1, $2, $3, $4, $5, $6);
             }
-        }, totalFinalScore, (state == GameState::WIN ? 1 : 0), player.coins, livesBonus, coinBonus, baseCombatScore);
+        }, totalFinalScore, (state == GameState::WIN ? 1 : 0), player.coins, livesBonus, coinBonus, baseCombatScore, timeTakenSec);
 #endif
     }
 }
@@ -565,6 +567,7 @@ void Game::update(){
     if(state != GameState::PLAYING) return;
 
     globalTime += 0.016f;
+    playTime += 0.0166667f;
     bgScroll += 1.2f;
     if(bgScroll > WIN_H) bgScroll -= WIN_H;
 
@@ -934,6 +937,26 @@ void Game::drawHUD(){
 
     // ── Thin HUD separator line ───────────────────────────────────────────────
     ddaLine(0, WIN_H-35, WIN_W, WIN_H-35, Color(0.35f,0.30f,0.55f,0.45f));
+
+    // ── Live Game Timer (top-left inside top HUD strip) ───────────────────────
+    int sec = (int)playTime;
+    int mins = sec / 60;
+    int remSec = sec % 60;
+    char timeBuf[16];
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", mins, remSec);
+    std::string timeStr = "TIME " + std::string(timeBuf);
+
+    float tbx = 14.0f;
+    float tby = WIN_H - 33.0f;
+    float tbw = 112.0f;
+    float tbh = 24.0f;
+    drawRect(tbx, tby, tbw, tbh, Color(0.04f, 0.08f, 0.12f, 0.85f));
+    drawRectOutline(tbx, tby, tbw, tbh, Color(0.18f, 0.75f, 0.45f, 0.75f), 1.5f);
+#ifdef __EMSCRIPTEN__
+    renderArcadeText(tbx + 10.0f, tby + 7.0f, timeStr, Color(0.25f, 1.0f, 0.55f), 1.30f);
+#else
+    drawText(tbx + 10.0f, tby + 7.0f, timeStr, Color(0.25f, 1.0f, 0.55f), GLUT_BITMAP_HELVETICA_12);
+#endif
 
     // ── HP bar — retro LCD style ──────────────────────────────────────────────
     float hpFrac=(float)player.hp/player.maxHp;
@@ -1329,44 +1352,54 @@ void Game::drawWinScreen(){
     glDisable(GL_BLEND);
 
     // Main box — dark green with layered border
-    float bx=WIN_W/2-185, by=WIN_H/2-65;
-    drawRect(bx, by, 370, 150, Color(0.00f,0.06f,0.01f,0.95f));
-    drawRectOutline(bx,   by,   370, 150, Color(0.18f,0.92f,0.28f,0.90f), 3.0f);
-    drawRectOutline(bx+5, by+5, 360, 140, Color(0.10f,0.55f,0.16f,0.55f), 1.5f);
+    float bx=WIN_W/2-185, by=WIN_H/2-80;
+    drawRect(bx, by, 370, 165, Color(0.00f,0.06f,0.01f,0.95f));
+    drawRectOutline(bx,   by,   370, 165, Color(0.18f,0.92f,0.28f,0.90f), 3.0f);
+    drawRectOutline(bx+5, by+5, 360, 155, Color(0.10f,0.55f,0.16f,0.55f), 1.5f);
     // Corner stars
     drawCircle(bx+5,   by+5,   5, Color(0.8f,1.0f,0.2f,0.8f));
     drawCircle(bx+365, by+5,   5, Color(0.8f,1.0f,0.2f,0.8f));
-    drawCircle(bx+5,   by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
-    drawCircle(bx+365, by+145, 5, Color(0.8f,1.0f,0.2f,0.8f));
+    drawCircle(bx+5,   by+160, 5, Color(0.8f,1.0f,0.2f,0.8f));
+    drawCircle(bx+365, by+160, 5, Color(0.8f,1.0f,0.2f,0.8f));
 
     int winScore = player.score + std::max(0, player.lives)*200 + player.coins*2;
+    int sec = (int)playTime;
+    int mins = sec / 60;
+    int remSec = sec % 60;
+    char timeBuf[32];
+    snprintf(timeBuf, sizeof(timeBuf), "%02d:%02d", mins, remSec);
+    std::string timeStr = "TIME " + std::string(timeBuf);
+
 #ifdef __EMSCRIPTEN__
     // "YOU WIN!" — outlined, bright
-    renderArcadeTextOutlined(WIN_W/2-102, WIN_H/2+42, "YOU WIN!",
+    renderArcadeTextOutlined(WIN_W/2-102, WIN_H/2+45, "YOU WIN!",
         Color(0.22f,1.0f,0.32f), 3.0f,
         Color(0.0f,0.15f,0.0f,0.95f));
     // Score — glowing arcade cyan
-    renderArcadeTextGlow(WIN_W/2-104, WIN_H/2+10,
+    renderArcadeTextGlow(WIN_W/2-104, WIN_H/2+15,
         "SCORE "+std::to_string(winScore),
         Color(0.0f,0.95f,0.85f), 1.7f,
         Color(0.0f,0.60f,0.50f), 0.28f);
-    renderArcadeTextWithShadow(WIN_W/2-68, WIN_H/2-12,
+    renderArcadeTextWithShadow(WIN_W/2-68, WIN_H/2-7,
         "COINS "+std::to_string(player.coins),
-        Color(1.0f,0.70f,0.20f), 1.6f, 1.2f);
+        Color(1.0f,0.70f,0.20f), 1.5f, 1.2f);
+    renderArcadeTextWithShadow(WIN_W/2-56, WIN_H/2-27,
+        timeStr, Color(0.35f,1.0f,0.60f), 1.5f, 1.2f);
     // Blinking continue
     float baWin = 0.45f + 0.55f*std::abs(std::sin(globalTime*2.8f));
     if(isMobile){
-        renderArcadeText(WIN_W/2-126, WIN_H/2-32, "TAP START TO PLAY AGAIN",
-            Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+        renderArcadeText(WIN_W/2-126, WIN_H/2-48, "TAP START TO PLAY AGAIN",
+            Color(0.55f,0.78f,0.55f,baWin), 1.35f);
     } else {
-        renderArcadeText(WIN_W/2-138, WIN_H/2-32, "PRESS START OR ENTER",
-            Color(0.55f,0.78f,0.55f,baWin), 1.4f);
+        renderArcadeText(WIN_W/2-138, WIN_H/2-48, "PRESS START OR ENTER",
+            Color(0.55f,0.78f,0.55f,baWin), 1.35f);
     }
 #else
-    drawTextLarge(WIN_W/2-100, WIN_H/2+40, "YOU WIN!", Color(0.2f,1.0f,0.3f));
-    drawText(WIN_W/2-80, WIN_H/2+12,"Final Score: "+std::to_string(player.score), Color(1,1,0.3f));
-    drawText(WIN_W/2-80, WIN_H/2-8, "Coins: "+std::to_string(player.coins), Color(1,0.85f,0));
-    drawText(WIN_W/2-110, WIN_H/2-28,"PRESS ENTER to return to menu", Color(0.7f,0.7f,0.7f));
+    drawTextLarge(WIN_W/2-100, WIN_H/2+42, "YOU WIN!", Color(0.2f,1.0f,0.3f));
+    drawText(WIN_W/2-80, WIN_H/2+16, "Final Score: "+std::to_string(winScore), Color(1,1,0.3f));
+    drawText(WIN_W/2-80, WIN_H/2-2,  "Coins: "+std::to_string(player.coins), Color(1,0.85f,0));
+    drawText(WIN_W/2-80, WIN_H/2-20, "Clear Time: "+std::string(timeBuf), Color(0.3f,1.0f,0.6f));
+    drawText(WIN_W/2-110, WIN_H/2-42,"PRESS ENTER to return to menu", Color(0.7f,0.7f,0.7f));
 #endif
 }
 
@@ -1494,7 +1527,7 @@ void Game::drawComboHUD(){
         streakText = "STREAK " + std::to_string(comboStreak);
     }
 
-    float bx = 12.0f;
+    float bx = 134.0f;
     float by = WIN_H - 33.0f;
     float bw = 114.0f;
     float bh = 24.0f;
