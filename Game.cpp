@@ -106,6 +106,9 @@ Game::Game()
       bgScroll(0), uiMessageTimer(0),
       notifiedEndGame(false),
       bossWarningActive(false), bossWarningTimer(0),
+      bossLootActive(false), bossLootTimer(0),
+      bossLootSpawnTimer(0), bossLootPowerupsToSpawn(0),
+      bossLootFoodsToSpawn(0), bossLootCoinsToSpawn(0),
       isMobile(false), lastPauseToggleTime(0)
 {
     srand((unsigned)time(nullptr));
@@ -167,6 +170,12 @@ void Game::reset(){
     waveSpawned=false;
     bossWarningActive=false;
     bossWarningTimer=0;
+    bossLootActive=false;
+    bossLootTimer=0;
+    bossLootSpawnTimer=0;
+    bossLootPowerupsToSpawn=0;
+    bossLootFoodsToSpawn=0;
+    bossLootCoinsToSpawn=0;
     comboStreak=0;
     comboMultiplier=1;
     comboTimer=0;
@@ -399,11 +408,33 @@ void Game::handleBulletCollisions(){
             spawnExplosion(b.x, b.y, Color(1,0.2f,0.8f), 8);
             if(!boss->active){
                 playSfx("explosion");
-                player.score += 500;
-                spawnFloatingText(boss->x, boss->y + 30, "+500 BOSS!", Color(1.0f, 0.85f, 0.2f), 1.8f);
                 spawnExplosion(boss->x, boss->y, Color(1,0.5f,0), 60);
                 spawnExplosion(boss->x-30, boss->y+20, Color(1,0.8f,0), 40);
                 spawnExplosion(boss->x+30, boss->y-20, Color(0.8f,0.2f,1), 40);
+
+                // Level 3 Boss eliminated -> Game Finished! (No drops needed)
+                if(level >= 3){
+                    player.score += 1000;
+                    spawnFloatingText(boss->x, boss->y + 30, "+1000 VICTORY!", Color(1.0f, 0.85f, 0.2f), 2.0f);
+                    bossLootActive = false;
+                    state = GameState::WIN;
+                    checkEndGameNotification();
+                    return;
+                }
+
+                // Level 1 & 2: Staggered Loot Shower from top of screen
+                playSfx("powerup");
+                player.score += 500;
+                spawnFloatingText(boss->x, boss->y + 30, "+500 BOSS!", Color(1.0f, 0.85f, 0.2f), 1.8f);
+
+                bossLootActive = true;
+                bossLootTimer = 0;
+                bossLootSpawnTimer = 0;
+                bossLootPowerupsToSpawn = 1;
+                bossLootFoodsToSpawn = 4;
+                bossLootCoinsToSpawn = 8;
+                uiMessage = "LOOT SHOWER! CATCH THEM!";
+                uiMessageTimer = 220;
             } else {
                 playSfx("hit");
             }
@@ -464,6 +495,7 @@ void Game::handlePickups(){
         if(f.getAABB().intersects(pa)){
             f.active=false;
             player.foodCollected++;
+            player.hp = std::min(player.maxHp, player.hp + f.healAmount);
             player.score += 30;
             spawnExplosion(f.x,f.y,Color(0.3f,1.0f,0.4f),14);
             if(player.foodCollected >= Player::foodForLife){
@@ -564,6 +596,41 @@ void Game::update(){
         }
     }
 
+    // Staggered Boss Loot Shower from top of screen
+    if(bossLootActive && (bossLootPowerupsToSpawn > 0 || bossLootFoodsToSpawn > 0 || bossLootCoinsToSpawn > 0)){
+        if(++bossLootSpawnTimer >= 8){ // spawn every 8 frames (~133ms)
+            bossLootSpawnTimer = 0;
+            std::vector<int> pool;
+            if(bossLootPowerupsToSpawn > 0) pool.push_back(0);
+            if(bossLootFoodsToSpawn > 0)    pool.push_back(1);
+            if(bossLootCoinsToSpawn > 0)    pool.push_back(2);
+
+            if(!pool.empty()){
+                int choice = pool[rand() % pool.size()];
+                float spawnX = randF(60.0f, (float)WIN_W - 60.0f);
+                float spawnY = (float)WIN_H + 20.0f;
+                if(choice == 0){ // Power-up
+                    PowerUpType pt = (PowerUpType)(rand() % 3);
+                    PowerUp p(spawnX, spawnY, pt);
+                    p.speed = 5.0f; // fast fall
+                    powerups.push_back(p);
+                    bossLootPowerupsToSpawn--;
+                } else if(choice == 1){ // Food
+                    FoodType ft = (FoodType)(rand() % 3);
+                    Food f(spawnX, spawnY, ft);
+                    f.speed = 5.2f; // fast fall
+                    foods.push_back(f);
+                    bossLootFoodsToSpawn--;
+                } else { // Coin
+                    Coin c(spawnX, spawnY, 15);
+                    c.speed = 5.5f; // fast fall
+                    coins.push_back(c);
+                    bossLootCoinsToSpawn--;
+                }
+            }
+        }
+    }
+
     // Pickups
     for(auto& c : coins)    c.update();
     for(auto& f : foods)    f.update();
@@ -627,14 +694,28 @@ void Game::update(){
         }
     }
 
-    // Level complete — boss dead
+    // Level complete — boss dead & loot collection phase
     if(bossSpawned && boss && !boss->active && enemies.empty()){
         if(level >= 3){
-            state=GameState::WIN;
+            bossLootActive = false;
+            state = GameState::WIN;
             checkEndGameNotification();
             return;
         }
-        nextLevel();
+
+        if(bossLootActive){
+            bossLootTimer++;
+            bool allSpawned = (bossLootPowerupsToSpawn <= 0 && bossLootFoodsToSpawn <= 0 && bossLootCoinsToSpawn <= 0);
+            bool allCleared = (powerups.empty() && foods.empty() && coins.empty());
+
+            // Advance when all items are spawned and either collected or fell off screen, or safety timeout (~7 sec = 420 frames)
+            if((allSpawned && allCleared) || bossLootTimer >= 420){
+                bossLootActive = false;
+                nextLevel();
+            }
+        } else {
+            nextLevel();
+        }
     }
 
     // Enemy reaches bottom → game over
@@ -677,6 +758,11 @@ void Game::nextLevel(){
     level++;
     delete boss; boss=nullptr; bossSpawned=false;
     bossWarningActive=false; bossWarningTimer=0;
+    bossLootActive=false; bossLootTimer=0;
+    bossLootSpawnTimer=0;
+    bossLootPowerupsToSpawn=0;
+    bossLootFoodsToSpawn=0;
+    bossLootCoinsToSpawn=0;
     waveSpawned=false;
     enemies.clear(); coins.clear(); foods.clear(); powerups.clear(); floatingTexts.clear();
     enemySpawnRate = std::max(60, 120 - level*15);
