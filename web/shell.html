@@ -8,6 +8,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="theme-color" content="#06080d">
     <title>Chicken Invaders — Retro Arcade Web Edition</title>
+    <!-- Browser Tab Favicon -->
+    <link rel="icon" type="image/png" href="chicken.png?v=2">
+    <link rel="shortcut icon" type="image/png" href="chicken.png?v=2">
+    <link rel="apple-touch-icon" href="chicken.png?v=2">
     <!-- Console filter for Emscripten legacy GL emulation notices -->
     <script>
         (function() {
@@ -1286,6 +1290,91 @@
             letter-spacing: 1px;
         }
 
+        .lb-error-cell {
+            padding: 32px 18px;
+            text-align: center;
+        }
+
+        .lb-error-card {
+            display: inline-flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            max-width: 480px;
+            margin: 0 auto;
+            background: rgba(18, 24, 38, 0.75);
+            border: 1.5px dashed rgba(245, 158, 11, 0.45);
+            border-radius: 6px;
+            padding: 24px 28px;
+            box-shadow: 0 4px 22px rgba(0, 0, 0, 0.6), inset 0 0 16px rgba(245, 158, 11, 0.06);
+        }
+
+        .lb-error-icon {
+            font-size: 2.2rem;
+            line-height: 1;
+            filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.5));
+            animation: iconPulse 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes iconPulse {
+            0% { transform: scale(0.95); opacity: 0.85; }
+            100% { transform: scale(1.05); opacity: 1; }
+        }
+
+        .lb-error-badge {
+            font-family: var(--font-pixel);
+            font-size: 0.46rem;
+            letter-spacing: 2px;
+            padding: 4px 10px;
+            border-radius: 3px;
+            background: rgba(245, 158, 11, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(245, 158, 11, 0.4);
+            text-transform: uppercase;
+        }
+
+        .lb-error-title {
+            font-family: var(--font-pixel);
+            font-size: 0.78rem;
+            color: #fde047;
+            letter-spacing: 1.5px;
+            text-shadow: 0 0 10px rgba(251, 191, 36, 0.4);
+            margin-top: 2px;
+        }
+
+        .lb-error-desc {
+            font-family: var(--font-terminal);
+            font-size: 1.15rem;
+            color: #94a3b8;
+            line-height: 1.45;
+            letter-spacing: 0.8px;
+        }
+
+        .lb-error-retry-btn {
+            font-family: var(--font-pixel);
+            font-size: 0.52rem;
+            letter-spacing: 1.2px;
+            background: #141a24;
+            border: 1.5px solid #2d3b4e;
+            color: var(--retro-cyan);
+            padding: 8px 18px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 6px;
+            transition: all 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .lb-error-retry-btn:hover {
+            background: #1c2534;
+            border-color: var(--retro-cyan);
+            color: #fff;
+            box-shadow: 0 0 14px rgba(0, 229, 255, 0.4);
+            transform: translateY(-1px);
+        }
+
         /* ── World Saved Victory Splash ── */
         #worldSavedSplash {
             position: fixed;
@@ -2021,6 +2110,7 @@
         <h1>Chicken Invaders 🐔🛸</h1>
     </header>
 
+
     <div class="arcade-cabinet">
         <div class="cabinet-header">
             <div class="cabinet-badge">ARCADE // 60 FPS</div>
@@ -2733,6 +2823,92 @@
             }
         };
 
+        // Friendly DB error parser for maintenance, pause, and network failures
+        function getDbErrorInfo(error, fallbackMsg) {
+            var raw = '';
+            if (typeof error === 'string') {
+                raw = error;
+            } else if (error && error.message) {
+                raw = error.message;
+            } else if (error && error.details) {
+                raw = error.details;
+            } else if (error && error.hint) {
+                raw = error.hint;
+            } else if (error && error.error_description) {
+                raw = error.error_description;
+            }
+
+            var lower = (raw || '').toLowerCase();
+
+            // Supabase project paused / table missing from schema cache / 503 maintenance
+            if (lower.includes('schema cache') || 
+                lower.includes('paused') || 
+                lower.includes('not find the table') || 
+                lower.includes('relation') ||
+                lower.includes('503') ||
+                lower.includes('service unavailable')) {
+                return {
+                    type: 'paused',
+                    icon: '⏸️',
+                    badge: 'MAINTENANCE MODE',
+                    title: 'Database Under Maintenance',
+                    message: 'The leaderboard database is currently paused or undergoing maintenance. Global rankings will be back online shortly!',
+                    submitStatus: '⏸️ Database is paused for maintenance. Score saved locally!'
+                };
+            }
+
+            // Network / offline
+            if (lower.includes('network') || 
+                lower.includes('failed to fetch') || 
+                lower.includes('timeout') || 
+                lower.includes('offline') || 
+                lower.includes('connection')) {
+                return {
+                    type: 'network',
+                    icon: '📡',
+                    badge: 'OFFLINE',
+                    title: 'Connection Lost',
+                    message: 'Unable to reach the high score servers. Please check your internet connection.',
+                    submitStatus: '📡 Network error. Score saved locally!'
+                };
+            }
+
+            // Not connected / config
+            if (lower.includes('not connected') || lower.includes('supabase config missing')) {
+                return {
+                    type: 'config',
+                    icon: '⚙️',
+                    badge: 'CONFIG NEEDED',
+                    title: 'Leaderboard Unlinked',
+                    message: 'Supabase credentials are not connected. Check supabase-config.js.',
+                    submitStatus: '⚙️ Supabase not configured. Score saved locally!'
+                };
+            }
+
+            // Generic / fallback
+            return {
+                type: 'general',
+                icon: '⚠️',
+                badge: 'UNAVAILABLE',
+                title: 'Leaderboard Temporarily Unavailable',
+                message: fallbackMsg || 'Could not retrieve rankings at this time. Please try refreshing.',
+                submitStatus: '⚠️ Leaderboard unavailable. Score saved locally!'
+            };
+        }
+
+        function renderLeaderboardErrorRow(error) {
+            var info = getDbErrorInfo(error);
+            return '<tr><td colspan="5" class="lb-error-cell">'
+                + '<div class="lb-error-card">'
+                + '  <div class="lb-error-icon">' + info.icon + '</div>'
+                + '  <div class="lb-error-badge">' + info.badge + '</div>'
+                + '  <div class="lb-error-title">' + info.title + '</div>'
+                + '  <div class="lb-error-desc">' + info.message + '</div>'
+                + '  <button type="button" class="lb-error-retry-btn" onclick="fetchLeaderboard()">🔄 RETRY RADAR</button>'
+                + '</div>'
+                + '</td></tr>';
+        }
+
         // Submit Score Function
         async function submitPlayerScore() {
             var name = playerNameInput.value.trim();
@@ -2750,7 +2926,7 @@
             submitMsg.textContent = '';
 
             if (!sbClient) {
-                submitMsg.textContent = 'Supabase config missing. Stored locally!';
+                submitMsg.textContent = '⚙️ Supabase not configured. Score saved locally!';
                 submitMsg.className = 'msg-box msg-error';
                 btnSubmitScore.disabled = false;
                 btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
@@ -2783,7 +2959,8 @@
 
                 if (error) {
                     console.error("Supabase insert error:", error);
-                    submitMsg.textContent = 'Failed: ' + (error.message || 'Database error');
+                    var errInfo = getDbErrorInfo(error);
+                    submitMsg.textContent = errInfo.submitStatus;
                     submitMsg.className = 'msg-box msg-error';
                     btnSubmitScore.disabled = false;
                     btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
@@ -2805,7 +2982,8 @@
                 }
             } catch (err) {
                 console.error("Submit exception:", err);
-                submitMsg.textContent = 'Error: ' + err.message;
+                var errInfo = getDbErrorInfo(err);
+                submitMsg.textContent = errInfo.submitStatus;
                 submitMsg.className = 'msg-box msg-error';
                 btnSubmitScore.disabled = false;
                 btnSubmitScore.textContent = '🚀 Submit to Hall of Fame';
@@ -2835,7 +3013,7 @@
             leaderboardTableBody.innerHTML = '<tr><td colspan="5" class="lb-empty-msg">Fetching rankings...</td></tr>';
             
             if (!sbClient) {
-                leaderboardTableBody.innerHTML = '<tr><td colspan="5" class="lb-empty-msg">Supabase client is not connected. Check supabase-config.js.</td></tr>';
+                leaderboardTableBody.innerHTML = renderLeaderboardErrorRow('not connected');
                 return;
             }
 
@@ -2875,7 +3053,7 @@
 
                 if (error) {
                     console.error("Leaderboard fetch error:", error);
-                    leaderboardTableBody.innerHTML = '<tr><td colspan="5" class="lb-empty-msg" style="color:#f87171;">Failed to load leaderboard: ' + error.message + '</td></tr>';
+                    leaderboardTableBody.innerHTML = renderLeaderboardErrorRow(error);
                     return;
                 }
 
@@ -2933,7 +3111,7 @@
                 leaderboardTableBody.innerHTML = html;
             } catch (err) {
                 console.error("Fetch exception:", err);
-                leaderboardTableBody.innerHTML = '<tr><td colspan="5" class="lb-empty-msg" style="color:#f87171;">Network error loading leaderboard.</td></tr>';
+                leaderboardTableBody.innerHTML = renderLeaderboardErrorRow(err);
             }
         }
 
