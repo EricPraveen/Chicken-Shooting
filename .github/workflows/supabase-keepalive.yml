@@ -1,0 +1,26 @@
+name: Supabase Keep-Alive
+
+on:
+  schedule:
+    # Runs daily every 24 hours at 00:00 UTC to prevent Supabase auto-pause
+    - cron: '0 0 * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab anytime
+
+jobs:
+  ping-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase Leaderboard Table
+        run: |
+          echo "Sending keep-alive ping to Supabase..."
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLvRHL32yvM" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLvRHL32yvM" \
+            "https://vumaqjdttuqziiekjocd.supabase.co/rest/v1/leaderboard?select=id&limit=1")
+          
+          echo "Supabase response status: $HTTP_STATUS"
+          if [ "$HTTP_STATUS" -ge 200 ] && [ "$HTTP_STATUS" -lt 400 ]; then
+            echo "✅ Supabase is active and healthy!"
+          else
+            echo "⚠️ Received status code: $HTTP_STATUS. (If the project was paused, please resume it in Supabase dashboard once)."
+          fi
