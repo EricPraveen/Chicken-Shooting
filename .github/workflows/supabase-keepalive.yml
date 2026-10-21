@@ -14,8 +14,8 @@ jobs:
         run: |
           echo "Sending keep-alive ping to Supabase..."
           HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLvRHL32yvM" \
-            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLvRHL32yvM" \
+            -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLZLvRHL32yvM" \
+            -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZ1bWFxamR0dHVxemlpZWtqb2NkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODg4MzU0OTQsImV4cCI6MjEwNDQxMTQ5NH0.tZ8yRTpwd9pySZeOR00ouRBQyp8zLJyLZLvRHL32yvM" \
             "https://vumaqjdttuqziiekjocd.supabase.co/rest/v1/leaderboard?select=id&limit=1")
           
           echo "Supabase response status: $HTTP_STATUS"
